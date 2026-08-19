@@ -470,6 +470,60 @@ textarea.notes::placeholder{ color:var(--ink-faint); }
   .bottom-row{ grid-template-columns:1fr; }
   .kpi-row{ grid-template-columns:1fr 1fr; }
 }
+
+/* Phone-width tailoring — the sidenav shrinks to icon-only and stays that
+   way (no expand toggle, no room for it), the topbar sheds secondary
+   chrome, and the map gets a shorter default height so the panels below
+   it aren't pushed a full screen-height down. */
+@media (max-width: 640px){
+  #app{ grid-template-columns:56px 1fr; grid-template-rows:52px 1fr; }
+  #app.nav-expanded{ grid-template-columns:56px 1fr; }
+  .nav-toggle{ display:none !important; }
+  .brand{ padding:0 0 14px; justify-content:center; }
+  .brand .mark{ font-size:0; }
+  .brand .mark b{ font-size:15px; }
+  .nav-foot{ display:none; }
+  .navlist{ padding:0 6px; }
+  .navlist li{ padding:11px 0; justify-content:center; }
+
+  header#topbar{ padding:0 10px; gap:8px; min-width:0; }
+  .event-select{ min-width:0; flex-shrink:1; }
+  .event-select > div{ min-width:0; }
+  .event-select .sub{ display:none; }
+  .event-select .ttl{ font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .clock{ display:none; }
+  .theme-toggle{ display:none; }
+  .live-pill{ padding:4px 8px; font-size:10px; flex-shrink:0; }
+  .user-chip .role{ display:none; }
+  .user-chip .name{ display:none; }
+  /* A floating fixed badge has nowhere safe to sit on a short phone
+     screen — dock it back into the normal document flow instead (it's
+     already the first child of #main), so it just pushes the KPI row
+     down rather than overlapping it. */
+  .truth-badge{
+    position:static; transform:none; left:auto; display:block;
+    width:fit-content; margin:0 0 10px; font-size:9.5px; padding:5px 10px;
+  }
+
+  main#main{ padding:10px; gap:10px; min-width:0; }
+  .kpi-row{ grid-template-columns:1fr 1fr; gap:8px; }
+  .kpi-card{ padding:11px 12px; gap:6px; }
+  .kpi-card .val{ font-size:20px; }
+  .kpi-card svg.spark{ height:22px; }
+
+  #map{ height:360px; }
+  .map-toolbar{ max-width:calc(100% - 84px); gap:6px; }
+  .chip{ padding:5px 9px; font-size:10.5px; }
+  .legend-bar{ left:8px; bottom:56px; gap:8px; padding:6px 10px; font-size:10px; }
+  .legend-bar .thermal-ramp{ width:44px; }
+  .view3d-btn{ right:8px; bottom:56px; padding:6px 9px; font-size:11px; }
+  .replay-bar{ left:8px; right:8px; bottom:8px; padding:7px 10px; gap:8px; }
+  .map-zoom, .map-tools{ right:8px; }
+  .map-tools{ top:98px; }
+
+  .incident-body{ max-height:none; overflow-y:visible; }
+  .bottom-row{ gap:10px; }
+}
 </style>
 </head>
 <body>
@@ -1587,12 +1641,19 @@ setInterval(()=>{
 }, REPLAY_TICK_MS);
 function scrubFromEvent(e){
   const r = document.getElementById("replayTrack").getBoundingClientRect();
-  const pct = Math.max(0, Math.min(1, (e.clientX-r.left)/r.width));
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const pct = Math.max(0, Math.min(1, (clientX-r.left)/r.width));
   setVirtualTime(T_MIN + pct*(T_MAX-T_MIN));
 }
-document.getElementById("replayTrack").addEventListener("mousedown", (e)=>{ dragging=true; playing=false; document.getElementById("playIcon").innerHTML='<path d="M8 5v14l11-7z"/>'; scrubFromEvent(e); });
+function startScrub(e){ dragging=true; playing=false; document.getElementById("playIcon").innerHTML='<path d="M8 5v14l11-7z"/>'; scrubFromEvent(e); }
+document.getElementById("replayTrack").addEventListener("mousedown", startScrub);
 window.addEventListener("mousemove", (e)=>{ if (dragging) scrubFromEvent(e); });
 window.addEventListener("mouseup", ()=>{ dragging=false; });
+// Touch equivalents — the track only listens for mouse events by default,
+// which don't reliably drive a drag gesture on a real phone.
+document.getElementById("replayTrack").addEventListener("touchstart", startScrub, { passive:true });
+window.addEventListener("touchmove", (e)=>{ if (dragging){ e.preventDefault(); scrubFromEvent(e); } }, { passive:false });
+window.addEventListener("touchend", ()=>{ dragging=false; });
 
 /* ---------------- Toast ---------------- */
 function toast(msg){
