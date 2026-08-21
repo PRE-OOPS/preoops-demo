@@ -656,856 +656,664 @@ textarea.notes::placeholder{ color:var(--ink-faint); }
    time by build.mjs — see that file for the full field list.
    Nothing here calls a live backend — every build is a self-contained mock.
 ================================================================= */
-const PAGE_TITLE = "PRE//OOPS — Sziget Festival 2027";
-const EVENT_TITLE = "Sziget Festival 2027";
-const EVENT_SUBTITLE = "2027. aug. 9–15. · 3. nap";
-const EVENT_NAME_SHORT = "Sziget";
+const PAGE_TITLE = "PRE//OOPS — Budapest Park";
+const EVENT_TITLE = "Budapest Park — Nyári koncertszezon";
+const EVENT_SUBTITLE = "2026. aug. 22. · esti koncert";
+const EVENT_NAME_SHORT = "Budapest Park";
 const EVENT_SWITCHER_ITEMS = [
   {
-    "t": "Sziget Festival 2026",
+    "t": "Budapest Park — 2025 szezonzárás",
     "s": "Archivált szabályozott visszajátszás"
   },
   {
-    "t": "EFOTT 2027",
+    "t": "Akvárium Klub",
     "s": "Tervezés — pilot felmérés"
   }
 ];
 const MAPBOX_TOKEN = "pk.eyJ1IjoiYXR0aWxhYm9yY3MiLCJhIjoiY210MDFmOWQxMDFhcjJ4cXdpb3RkMHJwdSJ9.Gh4BG0rWNafemMxQ9TtkpQ";
 const MAP_CENTER = [
-  19.051,
-  47.5525
+  19.07776,
+  47.46755
 ];
-const MAP_ZOOM = 15.35;
-const MAP_PITCH = 64;
-const MAP_BEARING = -22;
-const TREE_SEED = 20270812;
+const MAP_ZOOM = 17.6;
+const MAP_PITCH = 58;
+const MAP_BEARING = -15;
+const TREE_SEED = 10951;
 const ZONES = [
   {
-    "id": "north-camp",
-    "name": "Északi tábor",
-    "lng": 19.05005,
-    "lat": 47.552958,
-    "kind": "camping"
+    "id": "entrance",
+    "name": "Bejárat – Fábián Juli tér",
+    "lng": 19.07655,
+    "lat": 47.4679,
+    "kind": "entrance"
   },
   {
     "id": "main-stage",
     "name": "Nagyszínpad",
-    "lng": 19.054,
-    "lat": 47.5514,
+    "lng": 19.0787,
+    "lat": 47.46782,
     "kind": "venue"
   },
   {
-    "id": "k-bridge",
-    "name": "Bejárat – K híd",
-    "lng": 19.049076,
-    "lat": 47.550636,
-    "kind": "entrance"
+    "id": "dancefloor",
+    "name": "Tánctér",
+    "lng": 19.07782,
+    "lat": 47.46763,
+    "kind": "venue"
+  },
+  {
+    "id": "panorama-terrace",
+    "name": "Panoráma Terasz",
+    "lng": 19.0777,
+    "lat": 47.46788,
+    "kind": "terrace"
+  },
+  {
+    "id": "front-terrace",
+    "name": "Mastercard Front Terasz",
+    "lng": 19.0781,
+    "lat": 47.46771,
+    "kind": "terrace"
   },
   {
     "id": "food-court",
-    "name": "Étkezde",
-    "lng": 19.0522,
-    "lat": 47.5498,
+    "name": "Food Truck sor",
+    "lng": 19.077,
+    "lat": 47.46755,
     "kind": "service"
   },
   {
-    "id": "vip-camp",
-    "name": "VIP kemping",
-    "lng": 19.0555,
-    "lat": 47.5548,
-    "kind": "camping"
-  },
-  {
-    "id": "europa-camp",
-    "name": "Siesta Camping",
-    "lng": 19.050601,
-    "lat": 47.553507,
-    "kind": "camping"
-  },
-  {
-    "id": "world-music",
-    "name": "Világzene Stage",
-    "lng": 19.0508,
-    "lat": 47.5482,
-    "kind": "venue"
+    "id": "bar-south",
+    "name": "Déli Bár",
+    "lng": 19.078295,
+    "lat": 47.467561,
+    "kind": "service"
   }
 ];
 const FOOTPATH_ORDER = [
-  "k-bridge",
-  "north-camp",
-  "main-stage",
+  "entrance",
   "food-court",
-  "vip-camp",
+  "panorama-terrace",
   "main-stage",
-  "world-music",
-  "europa-camp",
-  "north-camp"
+  "front-terrace",
+  "dancefloor",
+  "bar-south",
+  "entrance"
 ];
 const SITE_BOUNDARY = [
   [
-    19.0476466,
-    47.543933
+    19.0764954,
+    47.4679209
   ],
   [
-    19.0477753,
-    47.5417718
+    19.0764943,
+    47.4679427
   ],
   [
-    19.04805,
-    47.5406883
+    19.0765066,
+    47.4679592
   ],
   [
-    19.0482045,
-    47.5373566
+    19.0765345,
+    47.4679749
   ],
   [
-    19.0483541,
-    47.5373004
+    19.0769172,
+    47.4679652
   ],
   [
-    19.048633,
-    47.5372689
+    19.0783156,
+    47.4679495
   ],
   [
-    19.0495606,
-    47.5410592
+    19.0788559,
+    47.4679427
   ],
   [
-    19.0499382,
-    47.5425251
+    19.0789137,
+    47.4679333
   ],
   [
-    19.0501261,
-    47.5427417
+    19.0789701,
+    47.4679133
   ],
   [
-    19.0502571,
-    47.5432383
+    19.0790068,
+    47.4678828
   ],
   [
-    19.0504751,
-    47.5433736
+    19.0790211,
+    47.4678455
   ],
   [
-    19.0505679,
-    47.5442109
+    19.0790178,
+    47.4678147
   ],
   [
-    19.0505841,
-    47.5450135
+    19.0790013,
+    47.4677848
   ],
   [
-    19.0505991,
-    47.5463315
+    19.0789571,
+    47.4677592
   ],
   [
-    19.0506249,
-    47.5471252
+    19.0785486,
+    47.4676068
   ],
   [
-    19.0507064,
-    47.5473755
+    19.0785139,
+    47.4675944
   ],
   [
-    19.051304,
-    47.5473818
+    19.0784792,
+    47.467582
   ],
   [
-    19.0516291,
-    47.5450917
+    19.0778585,
+    47.4673597
   ],
   [
-    19.0515347,
-    47.544999
+    19.0777744,
+    47.4673298
   ],
   [
-    19.051569,
-    47.544466
+    19.0776629,
+    47.4672879
   ],
   [
-    19.0515175,
-    47.5435853
+    19.0776248,
+    47.4672748
   ],
   [
-    19.0512858,
-    47.5433246
+    19.0771785,
+    47.467117
   ],
   [
-    19.0508652,
-    47.5423165
+    19.0768095,
+    47.4675444
   ],
   [
-    19.0507193,
-    47.5416849
-  ],
-  [
-    19.0505991,
-    47.5416096
-  ],
-  [
-    19.0503073,
-    47.5403001
-  ],
-  [
-    19.0501872,
-    47.5401495
-  ],
-  [
-    19.0500355,
-    47.5396373
-  ],
-  [
-    19.0499455,
-    47.5388954
-  ],
-  [
-    19.0495181,
-    47.5381189
-  ],
-  [
-    19.0491847,
-    47.5373742
-  ],
-  [
-    19.0493315,
-    47.537243
-  ],
-  [
-    19.0494902,
-    47.5372944
-  ],
-  [
-    19.0499653,
-    47.5379431
-  ],
-  [
-    19.0503417,
-    47.5384923
-  ],
-  [
-    19.0504514,
-    47.5386835
-  ],
-  [
-    19.0511682,
-    47.539089
-  ],
-  [
-    19.0513218,
-    47.5393244
-  ],
-  [
-    19.0512265,
-    47.5394198
-  ],
-  [
-    19.0519961,
-    47.5402776
-  ],
-  [
-    19.0522647,
-    47.5404124
-  ],
-  [
-    19.0526958,
-    47.5409572
-  ],
-  [
-    19.0528771,
-    47.54108
-  ],
-  [
-    19.0531226,
-    47.54143
-  ],
-  [
-    19.0532942,
-    47.5415632
-  ],
-  [
-    19.0536182,
-    47.5420222
-  ],
-  [
-    19.0537468,
-    47.5423354
-  ],
-  [
-    19.0538423,
-    47.5425241
-  ],
-  [
-    19.0539743,
-    47.5428121
-  ],
-  [
-    19.054041,
-    47.5428785
-  ],
-  [
-    19.0545388,
-    47.543707
-  ],
-  [
-    19.056573,
-    47.5471021
-  ],
-  [
-    19.0581351,
-    47.5494483
-  ],
-  [
-    19.0584182,
-    47.549973
-  ],
-  [
-    19.0585044,
-    47.5501391
-  ],
-  [
-    19.0594601,
-    47.5517054
-  ],
-  [
-    19.0599461,
-    47.5524317
-  ],
-  [
-    19.0608798,
-    47.5549528
-  ],
-  [
-    19.0610987,
-    47.5556218
-  ],
-  [
-    19.0612502,
-    47.5558844
-  ],
-  [
-    19.0612726,
-    47.5561722
-  ],
-  [
-    19.0614138,
-    47.5567646
-  ],
-  [
-    19.0616112,
-    47.5579405
-  ],
-  [
-    19.0613709,
-    47.5590583
-  ],
-  [
-    19.061361,
-    47.5601132
-  ],
-  [
-    19.0612078,
-    47.5604311
-  ],
-  [
-    19.060936,
-    47.560565
-  ],
-  [
-    19.0605654,
-    47.5606313
-  ],
-  [
-    19.060193,
-    47.5606329
-  ],
-  [
-    19.0591312,
-    47.5605876
-  ],
-  [
-    19.0590106,
-    47.5605469
-  ],
-  [
-    19.0582613,
-    47.5602596
-  ],
-  [
-    19.0578776,
-    47.5601125
-  ],
-  [
-    19.0560923,
-    47.5591394
-  ],
-  [
-    19.0546589,
-    47.5573323
-  ],
-  [
-    19.0515347,
-    47.5546909
-  ],
-  [
-    19.0504275,
-    47.5535787
-  ],
-  [
-    19.0491658,
-    47.5518583
-  ],
-  [
-    19.0489083,
-    47.551279
-  ],
-  [
-    19.0488396,
-    47.5499234
-  ],
-  [
-    19.0489855,
-    47.5487591
-  ],
-  [
-    19.0490714,
-    47.5484867
-  ],
-  [
-    19.0489499,
-    47.5480264
-  ],
-  [
-    19.0486508,
-    47.5468935
-  ],
-  [
-    19.0481101,
-    47.5458217
-  ],
-  [
-    19.0478984,
-    47.5451583
-  ],
-  [
-    19.0477496,
-    47.5446919
-  ],
-  [
-    19.0476466,
-    47.543933
+    19.0764954,
+    47.4679209
   ]
 ];
-const CLOCK_START = 820;
+const CLOCK_START = 1020;
 const RAW_SIGNALS = [
   {
     "t": 0,
-    "zone": "north-camp",
+    "zone": "bar-south",
     "lang": "hu",
-    "domain": "water",
-    "text": "Nincs víz a zuhanynál."
+    "domain": "payment",
+    "text": "Nem megy a kártyás fizetés a Déli Bárnál."
   },
   {
     "t": 1,
-    "zone": "north-camp",
-    "lang": "hu",
-    "domain": "water",
-    "text": "A WC-ben sincs víz."
+    "zone": "bar-south",
+    "lang": "en",
+    "domain": "payment",
+    "text": "Card payment not working at the south bar."
   },
   {
     "t": 2,
-    "zone": "north-camp",
-    "lang": "en",
-    "domain": "water",
-    "text": "Showers near north camp stopped."
-  },
-  {
-    "t": 3,
-    "zone": "north-camp",
+    "zone": "bar-south",
     "lang": "de",
-    "domain": "water",
-    "text": "Wasser bei den Duschen weg."
+    "domain": "payment",
+    "text": "Kartenzahlung geht nicht an der Südbar."
   },
   {
-    "t": 4.5,
-    "zone": "north-camp",
+    "t": 4,
+    "zone": "bar-south",
     "lang": "en",
-    "domain": "water",
-    "text": "Long queue at the showers, taps completely dry."
-  },
-  {
-    "t": 6,
-    "zone": "north-camp",
-    "lang": "hu",
-    "domain": "water",
-    "text": "Ugyanaz mint az előbb, még mindig nincs víz.",
-    "duplicate": true
-  },
-  {
-    "t": 15,
-    "zone": "north-camp",
-    "lang": "en",
-    "domain": "water",
-    "text": "Staff confirms low pressure on camping feed."
-  },
-  {
-    "t": 22,
-    "zone": "north-camp",
-    "lang": "hu",
-    "domain": "water",
-    "text": "A harmadik zuhanyblokk is száraz már."
-  },
-  {
-    "t": 30,
-    "zone": "north-camp",
-    "lang": "en",
-    "domain": "water",
-    "text": "Been down half an hour now, kids can't wash up."
-  },
-  {
-    "t": 58,
-    "zone": "north-camp",
-    "lang": "en",
-    "domain": "water",
-    "text": "Crew on site inspecting the main valve."
-  },
-  {
-    "t": 63,
-    "zone": "north-camp",
-    "lang": "en",
-    "domain": "water",
-    "text": "Valve reset, flow restored.",
-    "resolution": true
-  },
-  {
-    "t": 64,
-    "zone": "north-camp",
-    "lang": "hu",
-    "domain": "water",
-    "text": "Végre folyik a víz.",
-    "resolution": true
-  },
-  {
-    "t": 5,
-    "zone": "vip-camp",
-    "lang": "en",
-    "domain": "water",
-    "text": "No water pressure at VIP camping showers."
-  },
-  {
-    "t": 7,
-    "zone": "vip-camp",
-    "lang": "hu",
-    "domain": "water",
-    "text": "VIP kempingben nincs víznyomás."
-  },
-  {
-    "t": 18,
-    "zone": "vip-camp",
-    "lang": "en",
-    "domain": "water",
-    "text": "Still nothing at the VIP showers, guests complaining."
-  },
-  {
-    "t": 33,
-    "zone": "vip-camp",
-    "lang": "de",
-    "domain": "water",
-    "text": "Kein Wasser in der VIP-Camping-Dusche."
+    "domain": "payment",
+    "text": "Terminal frozen, staff rebooting it, still down."
   },
   {
     "t": 8,
-    "zone": "food-court",
+    "zone": "bar-south",
     "lang": "hu",
-    "domain": "waste",
-    "text": "Tele van a kuka a Food Courtnál."
-  },
-  {
-    "t": 10,
-    "zone": "food-court",
-    "lang": "en",
-    "domain": "waste",
-    "text": "Bins overflowing near food court."
+    "domain": "payment",
+    "text": "Ugyanaz mint az előbb, még mindig nem megy a kártya.",
+    "duplicate": true
   },
   {
     "t": 12,
-    "zone": "food-court",
-    "lang": "de",
-    "domain": "waste",
-    "text": "Müll läuft über beim Food Court."
+    "zone": "bar-south",
+    "lang": "en",
+    "domain": "payment",
+    "text": "Cash only for now, big queue building because of it."
   },
   {
-    "t": 25,
-    "zone": "food-court",
+    "t": 16,
+    "zone": "bar-south",
+    "lang": "hu",
+    "domain": "payment",
+    "text": "Fél óra és még mindig csak készpénz."
+  },
+  {
+    "t": 26,
+    "zone": "bar-south",
+    "lang": "en",
+    "domain": "payment",
+    "text": "IT on site, says it's a processor-side outage."
+  },
+  {
+    "t": 30,
+    "zone": "bar-south",
+    "lang": "en",
+    "domain": "payment",
+    "text": "Terminal swapped, running a test transaction now."
+  },
+  {
+    "t": 34,
+    "zone": "bar-south",
+    "lang": "hu",
+    "domain": "payment",
+    "text": "Megint működik a kártyás fizetés.",
+    "resolution": true
+  },
+  {
+    "t": 35,
+    "zone": "bar-south",
+    "lang": "en",
+    "domain": "payment",
+    "text": "Card payments back up at the south bar.",
+    "resolution": true
+  },
+  {
+    "t": 3,
+    "zone": "front-terrace",
+    "lang": "en",
+    "domain": "payment",
+    "text": "Card reader down at the Front Terrace bar too."
+  },
+  {
+    "t": 6,
+    "zone": "front-terrace",
+    "lang": "hu",
+    "domain": "payment",
+    "text": "A Front Teraszon sem megy a kártyás fizetés."
+  },
+  {
+    "t": 13,
+    "zone": "front-terrace",
+    "lang": "en",
+    "domain": "payment",
+    "text": "Still cash-only up here, VIP guests annoyed."
+  },
+  {
+    "t": 19,
+    "zone": "front-terrace",
+    "lang": "de",
+    "domain": "payment",
+    "text": "Kartenzahlung an der VIP-Terrasse geht immer noch nicht."
+  },
+  {
+    "t": 10,
+    "zone": "bar-south",
+    "lang": "hu",
+    "domain": "waste",
+    "text": "Tele van a kuka a Déli Bárnál."
+  },
+  {
+    "t": 12,
+    "zone": "bar-south",
     "lang": "en",
     "domain": "waste",
-    "text": "Smell is getting bad, bins still full."
+    "text": "Bins overflowing at the south bar."
+  },
+  {
+    "t": 16,
+    "zone": "bar-south",
+    "lang": "de",
+    "domain": "waste",
+    "text": "Müll läuft über an der Südbar."
+  },
+  {
+    "t": 30,
+    "zone": "bar-south",
+    "lang": "en",
+    "domain": "waste",
+    "text": "Still not emptied, smell getting bad."
+  },
+  {
+    "t": 45,
+    "zone": "bar-south",
+    "lang": "hu",
+    "domain": "waste",
+    "text": "Végre kijött valaki takarítani."
+  },
+  {
+    "t": 48,
+    "zone": "bar-south",
+    "lang": "en",
+    "domain": "waste",
+    "text": "Bins emptied, area clean now.",
+    "resolution": true
+  },
+  {
+    "t": 35,
+    "zone": "main-stage",
+    "lang": "hu",
+    "domain": "crowd",
+    "text": "Nagy a nyomás a színpad elejénél, tolonganak."
+  },
+  {
+    "t": 37,
+    "zone": "main-stage",
+    "lang": "en",
+    "domain": "crowd",
+    "text": "Crush building at the barrier up front."
+  },
+  {
+    "t": 42,
+    "zone": "main-stage",
+    "lang": "en",
+    "domain": "crowd",
+    "text": "Security pulled two people out from the crowd."
+  },
+  {
+    "t": 55,
+    "zone": "main-stage",
+    "lang": "en",
+    "domain": "crowd",
+    "text": "Still very tight at the barrier."
+  },
+  {
+    "t": 70,
+    "zone": "main-stage",
+    "lang": "de",
+    "domain": "crowd",
+    "text": "Sehr eng vor der Bühne, Security beobachtet."
+  },
+  {
+    "t": 88,
+    "zone": "main-stage",
+    "lang": "en",
+    "domain": "crowd",
+    "text": "Barrier crowd still dense as the headliner starts."
+  },
+  {
+    "t": 18,
+    "zone": "panorama-terrace",
+    "lang": "hu",
+    "domain": "waste",
+    "text": "Majdnem tele a kuka a Panoráma Teraszon."
+  },
+  {
+    "t": 20,
+    "zone": "panorama-terrace",
+    "lang": "en",
+    "domain": "waste",
+    "text": "Bin's nearly full up on the terrace."
+  },
+  {
+    "t": 27,
+    "zone": "dancefloor",
+    "lang": "hu",
+    "domain": "noise",
+    "text": "Sípoló hang a hangfalaknál a tánctéren."
+  },
+  {
+    "t": 29,
+    "zone": "dancefloor",
+    "lang": "en",
+    "domain": "noise",
+    "text": "Speaker feedback on the dancefloor, brief squeal."
   },
   {
     "t": 40,
     "zone": "food-court",
     "lang": "hu",
-    "domain": "waste",
-    "text": "Senki nem jött ki takarítani."
+    "domain": "crowd",
+    "text": "Hosszú sor a food trucköknél."
   },
   {
-    "t": 68,
+    "t": 43,
     "zone": "food-court",
     "lang": "en",
-    "domain": "waste",
-    "text": "Crew emptied the bins, area cleaned.",
-    "resolution": true
+    "domain": "crowd",
+    "text": "Line for the food trucks getting long."
   },
   {
-    "t": 14,
-    "zone": "main-stage",
+    "t": 47,
+    "zone": "food-court",
     "lang": "en",
     "domain": "crowd",
-    "text": "Long queue building at Main Stage entrance."
+    "text": "Still backed up, one truck ran out of stock."
   },
   {
-    "t": 15,
-    "zone": "main-stage",
-    "lang": "hu",
-    "domain": "crowd",
-    "text": "Nagyon lassan halad a sor a főszínpadnál."
-  },
-  {
-    "t": 17,
-    "zone": "main-stage",
-    "lang": "en",
-    "domain": "crowd",
-    "text": "Bottleneck at the barrier, getting worse."
-  },
-  {
-    "t": 35,
-    "zone": "main-stage",
-    "lang": "en",
-    "domain": "crowd",
-    "text": "Queue now wrapping around the sound tower."
-  },
-  {
-    "t": 50,
-    "zone": "main-stage",
+    "t": 65,
+    "zone": "food-court",
     "lang": "de",
     "domain": "crowd",
-    "text": "Sehr lange Warteschlange vor der Hauptbühne."
-  },
-  {
-    "t": 72,
-    "zone": "main-stage",
-    "lang": "en",
-    "domain": "crowd",
-    "text": "Still backed up — security opened a second lane."
-  },
-  {
-    "t": 1,
-    "zone": "europa-camp",
-    "lang": "en",
-    "domain": "waste",
-    "text": "Waste point full, missed pickup this morning."
-  },
-  {
-    "t": 2,
-    "zone": "europa-camp",
-    "lang": "hu",
-    "domain": "waste",
-    "text": "A hulladékgyűjtő megtelt, reggel óta nem ürítették."
-  },
-  {
-    "t": 20,
-    "zone": "world-music",
-    "lang": "en",
-    "domain": "noise",
-    "text": "Speaker feedback / loud buzzing near stage left."
-  },
-  {
-    "t": 21,
-    "zone": "world-music",
-    "lang": "hu",
-    "domain": "noise",
-    "text": "Zúgó hang a hangfalaknál, zavaró."
-  },
-  {
-    "t": 24,
-    "zone": "k-bridge",
-    "lang": "en",
-    "domain": "crowd",
-    "text": "Entrance queue backing up onto the bridge."
-  },
-  {
-    "t": 27,
-    "zone": "k-bridge",
-    "lang": "hu",
-    "domain": "crowd",
-    "text": "Nagy a tömeg a hídnál, alig haladunk."
-  },
-  {
-    "t": 29,
-    "zone": "k-bridge",
-    "lang": "de",
-    "domain": "crowd",
-    "text": "Stau am Eingang, kaum Bewegung."
-  },
-  {
-    "t": 45,
-    "zone": "k-bridge",
-    "lang": "en",
-    "domain": "crowd",
-    "text": "Queue still not moving at the bridge entrance."
-  },
-  {
-    "t": 26,
-    "zone": "north-camp",
-    "lang": "en",
-    "domain": "waste",
-    "text": "Waste bins overflowing near the north camp showers."
-  },
-  {
-    "t": 28,
-    "zone": "north-camp",
-    "lang": "hu",
-    "domain": "waste",
-    "text": "A zuhanyzónál is tele van a kuka."
-  },
-  {
-    "t": 31,
-    "zone": "north-camp",
-    "lang": "en",
-    "domain": "waste",
-    "text": "Same spot, still not collected."
-  },
-  {
-    "t": 44,
-    "zone": "north-camp",
-    "lang": "de",
-    "domain": "waste",
-    "text": "Müll quillt über bei den Duschen im Nordcamp."
+    "text": "Schlange an den Food Trucks wird länger."
   },
   {
     "t": 80,
-    "zone": "north-camp",
+    "zone": "food-court",
+    "lang": "en",
+    "domain": "crowd",
+    "text": "Line still long, second truck opened but not enough."
+  },
+  {
+    "t": 32,
+    "zone": "entrance",
+    "lang": "hu",
+    "domain": "waste",
+    "text": "A bejáratnál is tele a szemetes."
+  },
+  {
+    "t": 34,
+    "zone": "entrance",
     "lang": "en",
     "domain": "waste",
-    "text": "Bins emptied, area clear now.",
+    "text": "Bins at the entrance overflowing too."
+  },
+  {
+    "t": 50,
+    "zone": "entrance",
+    "lang": "en",
+    "domain": "waste",
+    "text": "Same spot, nobody's collected it."
+  },
+  {
+    "t": 63,
+    "zone": "entrance",
+    "lang": "de",
+    "domain": "waste",
+    "text": "Müll quillt über beim Eingang."
+  },
+  {
+    "t": 85,
+    "zone": "entrance",
+    "lang": "en",
+    "domain": "waste",
+    "text": "Crew emptied the entrance bins, cleared now.",
     "resolution": true
   },
   {
-    "t": 78,
+    "t": 75,
+    "zone": "main-stage",
+    "lang": "hu",
+    "domain": "water",
+    "text": "Nincs víz a stáb csapnál a színpad mögött."
+  },
+  {
+    "t": 79,
     "zone": "main-stage",
     "lang": "en",
     "domain": "water",
     "text": "No water at the backstage crew tap."
   },
   {
-    "t": 80,
-    "zone": "main-stage",
-    "lang": "hu",
-    "domain": "water",
-    "text": "A stábnak sincs víznyomása a főszínpadnál."
-  },
-  {
-    "t": 84,
+    "t": 83,
     "zone": "main-stage",
     "lang": "en",
     "domain": "water",
     "text": "Confirmed, crew tap still dry."
   },
   {
-    "t": 88,
+    "t": 90,
     "zone": "main-stage",
     "lang": "de",
     "domain": "water",
     "text": "Immer noch kein Wasser beim Bühnenteam."
   },
   {
-    "t": 55,
-    "zone": "food-court",
-    "lang": "en",
-    "domain": "crowd",
-    "text": "Long line for food, 20+ minute wait."
-  },
-  {
     "t": 58,
-    "zone": "food-court",
+    "zone": "bar-south",
     "lang": "hu",
     "domain": "crowd",
-    "text": "Hosszú sor az étkezdénél, húsz percet is várunk."
+    "text": "Hosszú sor a Déli Bárnál, alig fér oda az ember."
   },
   {
-    "t": 62,
-    "zone": "food-court",
+    "t": 61,
+    "zone": "bar-south",
     "lang": "en",
     "domain": "crowd",
-    "text": "Line still growing at food court."
+    "text": "Long line at the south bar, 15+ minute wait."
   },
   {
-    "t": 75,
-    "zone": "food-court",
+    "t": 68,
+    "zone": "bar-south",
+    "lang": "en",
+    "domain": "crowd",
+    "text": "Line still growing at the south bar."
+  },
+  {
+    "t": 82,
+    "zone": "bar-south",
     "lang": "de",
     "domain": "crowd",
-    "text": "Schlange an der Essensausgabe wird länger."
+    "text": "Schlange an der Südbar wird immer länger."
+  },
+  {
+    "t": 0,
+    "zone": "entrance",
+    "lang": "hu",
+    "domain": "crowd",
+    "text": "Hosszú sor a bejáratnál, alig mozdul."
+  },
+  {
+    "t": 1,
+    "zone": "entrance",
+    "lang": "en",
+    "domain": "crowd",
+    "text": "Line barely moving at the gate."
+  },
+  {
+    "t": 2,
+    "zone": "entrance",
+    "lang": "de",
+    "domain": "crowd",
+    "text": "Warteschlange am Eingang bewegt sich kaum."
+  },
+  {
+    "t": 4,
+    "zone": "entrance",
+    "lang": "en",
+    "domain": "crowd",
+    "text": "Only one bag-check lane open, huge backup forming."
+  },
+  {
+    "t": 14,
+    "zone": "entrance",
+    "lang": "en",
+    "domain": "crowd",
+    "text": "Second bag-check lane finally opened."
+  },
+  {
+    "t": 20,
+    "zone": "entrance",
+    "lang": "en",
+    "domain": "crowd",
+    "text": "Queue clearing, moving much faster now."
+  },
+  {
+    "t": 24,
+    "zone": "entrance",
+    "lang": "hu",
+    "domain": "crowd",
+    "text": "Bejáratnál minden rendben, nincs várakozás.",
+    "resolution": true
+  },
+  {
+    "t": 36,
+    "zone": "food-court",
+    "lang": "en",
+    "domain": "payment",
+    "text": "Card top-up machine at the food trucks is down too."
+  },
+  {
+    "t": 39,
+    "zone": "food-court",
+    "lang": "hu",
+    "domain": "payment",
+    "text": "A food trucköknél sem megy a kártyás feltöltés."
+  },
+  {
+    "t": 52,
+    "zone": "food-court",
+    "lang": "en",
+    "domain": "payment",
+    "text": "Still cash-only here, same as the bars apparently."
   }
 ];
 const MERGE_RULES = [
   {
-    "a": "north-camp::water",
-    "b": "vip-camp::water",
-    "at": 52
+    "a": "bar-south::payment",
+    "b": "front-terrace::payment",
+    "at": 22
   }
 ];
 const FACILITIES = [
   {
-    "name": "Zuhanyzó S-12",
-    "subtype": "shower",
-    "lng": 19.04998,
-    "lat": 47.552864
-  },
-  {
-    "name": "Zuhanyzó S-13",
-    "subtype": "shower",
-    "lng": 19.0504,
-    "lat": 47.5531
-  },
-  {
-    "name": "Mosdó C-14",
+    "name": "Mosdó – Nyugati bejárat",
     "subtype": "toilet",
-    "lng": 19.051,
-    "lat": 47.5527
+    "lng": 19.0767,
+    "lat": 47.46785
   },
   {
-    "name": "K híd bejárat",
+    "name": "Mosdó – Színpad mögött",
+    "subtype": "toilet",
+    "lng": 19.0786,
+    "lat": 47.46778
+  },
+  {
+    "name": "Fábián Juli téri bejárat",
     "subtype": "entrance",
-    "lng": 19.049076,
-    "lat": 47.550636
+    "lng": 19.07655,
+    "lat": 47.4679
   },
   {
-    "name": "Filatorigát HÉV",
+    "name": "Közvágóhíd HÉV-állomás",
     "subtype": "transit",
-    "lng": 19.0463,
-    "lat": 47.5518
+    "lng": 19.0774747,
+    "lat": 47.4659153
   },
   {
     "name": "Egészségügyi pont",
     "subtype": "medical",
-    "lng": 19.0522,
-    "lat": 47.5511
+    "lng": 19.0782,
+    "lat": 47.4676
   }
 ];
 const NOTIF_EXAMPLES = [
   {
     "sev": "critical",
-    "t": "Vízkimaradás NYITOTT állapotba emelve",
-    "s": "Északi tábor · épp most"
+    "t": "Fizetési kiesés NYITOTT állapotba emelve",
+    "s": "Déli Bár · épp most"
   },
   {
     "sev": "medium",
     "t": "Hulladék túlcsordulás kiosztva",
-    "s": "Étkezde · 4 perce"
+    "s": "Déli Bár · 6 perce"
   },
   {
     "sev": "low",
-    "t": "Bejárati sor oldódik",
-    "s": "K híd · 9 perce"
+    "t": "Hangvisszacsatolás oldódott",
+    "s": "Tánctér · 12 perce"
   }
 ];
 
