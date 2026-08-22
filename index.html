@@ -6,8 +6,8 @@
 <title>PRE//OOPS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link href="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.css" rel="stylesheet" />
-<script src="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.js"></script>
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.29.0/mapbox-gl.css" rel="stylesheet" />
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.29.0/mapbox-gl.js"></script>
 <style>
 /* ============================================================
    PRE//OOPS operator console — pixel-referenced mock UI
@@ -670,7 +670,7 @@ const EVENT_SWITCHER_ITEMS = [
     "s": "Tervezés — pilot felmérés"
   }
 ];
-const MAPBOX_TOKEN = "pk.eyJ1IjoiYXR0aWxhYm9yY3MiLCJhIjoiY210MDFmOWQxMDFhcjJ4cXdpb3RkMHJwdSJ9.Gh4BG0rWNafemMxQ9TtkpQ";
+const MAPBOX_TOKEN = "pk.eyJ1IjoiYXR0aWxhYm9yY3MiLCJhIjoiY21hdjR4aDNpMDBzbDJucXk0ZTU3MHRxcCJ9.H_WGKvSEPp_tm7QliaKQBQ";
 const MAP_CENTER = [
   19.051,
   47.5525
@@ -1843,7 +1843,7 @@ function renderLegend(){
 mapboxgl.accessToken = MAPBOX_TOKEN;
 const map = new mapboxgl.Map({
   container: "map",
-  style: "mapbox://styles/mapbox/dark-v11",
+  style: "mapbox://styles/mapbox/standard",
   center: MAP_CENTER,
   zoom: MAP_ZOOM,
   pitch: MAP_PITCH,
@@ -2518,40 +2518,36 @@ const FACILITY_ICON = {
 };
 
 map.on("style.load", ()=>{
-  // Dark v11 (classic) — swapped back from Standard for full manual control
-  // over every layer's color, so nothing in the basemap can clash with the
-  // thermal cluster palette the way Standard's baked-in green landcover did.
-  // 3D buildings/terrain/sky aren't native to this style, so they're added
-  // by hand below (same as before the earlier switch to Standard).
-  const baseLayers = map.getStyle().layers;
-  for (const layer of baseLayers){
-    if (layer.type === "symbol" && layer.layout && layer.layout["text-field"]){
-      map.setLayoutProperty(layer.id, "visibility", "none");
-    }
-  }
+  // Standard style — its classic-tileset-era predecessor (dark-v11) depends
+  // on the /v4/ raw tileset API, which Mapbox has since locked down (403s
+  // even on Mapbox's own public demo token, confirmed independent of this
+  // account/token). Standard resolves through its own currently-live
+  // pipeline and ships buildings/terrain/sky natively, so the labels and
+  // landcover color that used to clash with the thermal cluster palette
+  // are tamed via its own config API instead of by hiding raw style layers.
+  map.setConfigProperty("basemap", "lightPreset", "night");
+  map.setConfigProperty("basemap", "theme", "monochrome");
+  map.setConfigProperty("basemap", "showPointOfInterestLabels", false);
+  map.setConfigProperty("basemap", "showTransitLabels", false);
+  map.setConfigProperty("basemap", "showPlaceLabels", false);
+  map.setConfigProperty("basemap", "showRoadLabels", false);
+  map.setConfigProperty("basemap", "colorGreenspace", "#16241c");
+  map.setConfigProperty("basemap", "colorWater", "#0d1520");
+  map.setConfigProperty("basemap", "colorLand", "#10141d");
+  map.setConfigProperty("basemap", "colorBuildings", "#181f2c");
 
   // Real terrain relief (subtle on a river island, still gives the pitched
-  // camera genuine depth).
-  map.addSource("mapbox-dem", { type:"raster-dem", url:"mapbox://mapbox.mapbox-terrain-dem-v1", tileSize:512, maxzoom:14 });
+  // camera genuine depth). Standard already ships a "mapbox-dem" source —
+  // re-adding it would throw a duplicate-source error, so just point
+  // setTerrain at the existing one with our own exaggeration curve
+  // (Standard's own default decays to ~0 by our zoom levels).
   map.setTerrain({ source:"mapbox-dem", exaggeration: 1.6 });
 
-  // A believable night sky above the pitched horizon.
+  // A believable night sky above the pitched horizon — Standard has no
+  // built-in "sky" layer type, so this one's still added by hand.
   map.addLayer({
     id:"sky", type:"sky",
     paint:{ "sky-type":"atmosphere", "sky-atmosphere-sun-intensity":3, "sky-atmosphere-color":"#0a0d13" },
-  });
-
-  // Native 3D building extrusions — dark-v11 has building footprints in the
-  // composite source but doesn't extrude them by default.
-  map.addLayer({
-    id:"3d-buildings", source:"composite", "source-layer":"building",
-    filter:["==","extrude","true"], type:"fill-extrusion", minzoom:14,
-    paint:{
-      "fill-extrusion-color":"#181f2c",
-      "fill-extrusion-height":["get","height"],
-      "fill-extrusion-base":["get","min_height"],
-      "fill-extrusion-opacity":0.85,
-    },
   });
 
   // Real festival-site boundary (real Óbudai-sziget geometry, see
