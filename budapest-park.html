@@ -1869,7 +1869,7 @@ function renderMarkers(){
       cameraBearing = (cameraBearing + 46) % 360;
       map.flyTo({
         center:[target._offsetLng ?? target.lng, target._offsetLat ?? target.lat],
-        zoom: 16.3, pitch: is3D?62:0, bearing: is3D ? cameraBearing-180 : 0,
+        zoom: MAP_ZOOM + 0.95, pitch: is3D?62:0, bearing: is3D ? cameraBearing-180 : 0,
         speed: 1.9, curve: 1.3, essential: true,
       });
     }
@@ -1944,7 +1944,7 @@ function selectIncident(id){
   renderIncidentPanel();
   renderIncidentList();
   const inc = INCIDENTS_NOW.find(i=>i.id===id);
-  if (inc) map.flyTo({ center:[inc.lng, inc.lat], zoom:16.1, pitch: is3D?64:0, bearing: is3D?-38:0, speed:2.6, curve:1.35, essential:true });
+  if (inc) map.flyTo({ center:[inc.lng, inc.lat], zoom: MAP_ZOOM + 0.75, pitch: is3D?64:0, bearing: is3D?-38:0, speed:2.6, curve:1.35, essential:true });
 }
 
 function tabsHtml(inc){
