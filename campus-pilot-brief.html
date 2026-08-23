@@ -1,0 +1,252 @@
+<title>Campus Fesztivál Pilot Brief</title>
+<style>
+  :root{
+    --bg:#0a0d13; --panel:#10141d; --panel-2:#141a25; --panel-3:#181f2c;
+    --border:#212938; --border-soft:#1a212e;
+    --ink:#f2f4f9; --ink-dim:#8991a6; --ink-faint:#5c657a;
+    --pink:#c9414f; --orange:#c9903f; --teal:#3f9370; --cyan:#4f7fa3; --violet:#6f6f9e; --amber:#c2a94f;
+    --font-display:-apple-system,"Segoe UI","Helvetica Neue",Arial,sans-serif;
+    --font-body:-apple-system,"Segoe UI","Helvetica Neue",Arial,sans-serif;
+    --font-mono:ui-monospace,"SF Mono","Cascadia Code","Roboto Mono",monospace;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:var(--font-body); font-size:14.5px; line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  .page{ max-width:760px; margin:0 auto; padding:48px 28px 80px; }
+  .brand{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px; }
+  .mark{ font-family:var(--font-display); font-weight:800; font-size:20px; letter-spacing:.01em; }
+  .mark b{ color:var(--pink); font-weight:800; }
+  .doc-tag{ font-family:var(--font-mono); font-size:11px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.08em; }
+  h1{
+    font-family:var(--font-display); font-weight:800; font-size:30px; letter-spacing:-.01em;
+    line-height:1.15; margin:18px 0 6px; text-wrap:balance;
+  }
+  .subtitle{ color:var(--ink-dim); font-size:15px; margin:0 0 36px; max-width:56ch; }
+  h2{
+    font-family:var(--font-display); font-weight:700; font-size:11.5px; letter-spacing:.09em;
+    text-transform:uppercase; color:var(--ink-faint); margin:0 0 14px;
+    display:flex; align-items:center; gap:9px;
+  }
+  h2::before{ content:""; width:14px; height:2px; background:var(--pink); flex-shrink:0; }
+  section{ margin-bottom:38px; }
+  .card{
+    background:var(--panel); border:1px solid var(--border-soft); border-radius:12px;
+    padding:18px 20px;
+  }
+  .evidence-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px; }
+  .evidence-list li{
+    display:flex; gap:12px; align-items:flex-start; font-size:13.5px; color:var(--ink-dim);
+  }
+  .evidence-list .n{
+    font-family:var(--font-mono); font-size:11px; font-weight:600; color:var(--pink);
+    background:#c9414f1c; border:1px solid #c9414f40; border-radius:6px;
+    width:20px; height:20px; flex-shrink:0; display:grid; place-items:center; margin-top:1px;
+  }
+  .evidence-list b{ color:var(--ink); font-weight:600; }
+  .conclusion{
+    margin-top:16px; padding-top:16px; border-top:1px solid var(--border-soft);
+    font-size:13.5px; color:var(--ink);
+  }
+  .mech{ font-size:14.5px; color:var(--ink-dim); margin:0 0 16px; }
+  .mech b{ color:var(--ink); }
+  .four-up{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:10px;
+  }
+  .four-up .cell{
+    background:var(--panel-2); border:1px solid var(--border-soft); border-radius:10px;
+    padding:12px 12px; text-align:center;
+  }
+  .four-up .cell .k{ font-family:var(--font-mono); font-size:10px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.05em; margin-bottom:4px; }
+  .four-up .cell .v{ font-size:13px; font-weight:600; color:var(--ink); line-height:1.3; }
+  .stat-row{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .stat{
+    background:var(--panel-2); border:1px solid var(--border-soft); border-radius:10px; padding:14px 16px;
+  }
+  .stat .k{ font-family:var(--font-mono); font-size:10px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.05em; margin-bottom:6px; }
+  .stat .v{ font-family:var(--font-mono); font-size:20px; font-weight:700; color:var(--ink); letter-spacing:-.01em; }
+  .stat .d{ font-size:11.5px; color:var(--ink-dim); margin-top:2px; }
+  .stat.accent .v{ color:var(--pink); }
+  .estimate-note{ font-size:12px; color:var(--ink-faint); margin-top:10px; }
+  .ramp{ height:6px; border-radius:4px; margin:14px 0 6px; background:linear-gradient(90deg,var(--cyan),var(--violet),var(--amber),var(--orange),var(--pink)); }
+  .ramp-lbl{ display:flex; justify-content:space-between; font-family:var(--font-mono); font-size:10.5px; color:var(--ink-faint); }
+  .phases{ display:flex; flex-direction:column; gap:0; }
+  .phase{ display:flex; gap:16px; position:relative; padding-bottom:22px; }
+  .phase:last-child{ padding-bottom:0; }
+  .phase .rail{ display:flex; flex-direction:column; align-items:center; flex-shrink:0; }
+  .phase .dot{ width:10px; height:10px; border-radius:50%; background:var(--pink); margin-top:4px; flex-shrink:0; }
+  .phase .line{ width:1.5px; flex:1; background:var(--border); margin-top:4px; }
+  .phase:last-child .line{ display:none; }
+  .phase .body{ padding-bottom:2px; }
+  .phase .ph-name{ font-family:var(--font-display); font-weight:700; font-size:14.5px; margin-bottom:3px; }
+  .phase .ph-desc{ font-size:13px; color:var(--ink-dim); }
+  .scope-row{ display:flex; flex-wrap:wrap; gap:8px; }
+  .scope-chip{
+    display:flex; align-items:center; gap:7px; background:var(--panel-2); border:1px solid var(--border-soft);
+    padding:7px 13px; border-radius:999px; font-size:12.5px; color:var(--ink-dim);
+  }
+  .scope-chip .sw{ width:7px;height:7px;border-radius:50%; }
+  .cta{
+    background:linear-gradient(135deg,#181014,#10141d); border:1px solid #c9414f33; border-radius:14px;
+    padding:24px 24px; text-align:center;
+  }
+  .cta .lead{ font-family:var(--font-display); font-weight:700; font-size:16px; margin-bottom:6px; }
+  .cta .sub{ font-size:13px; color:var(--ink-dim); margin-bottom:18px; max-width:46ch; margin-left:auto; margin-right:auto; }
+  .cta .steps{ display:flex; justify-content:center; gap:8px; flex-wrap:wrap; font-family:var(--font-mono); font-size:11.5px; color:var(--ink-faint); }
+  .cta .steps span.step{ background:var(--panel-3); border:1px solid var(--border); padding:5px 11px; border-radius:999px; }
+  .cta .steps .arrow{ color:var(--ink-faint); align-self:center; }
+  footer{
+    margin-top:44px; padding-top:20px; border-top:1px solid var(--border-soft);
+    display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px;
+  }
+  footer .who b{ font-family:var(--font-display); font-size:14px; }
+  footer .who .role{ font-size:12px; color:var(--ink-faint); }
+  footer .contacts{ font-family:var(--font-mono); font-size:11.5px; color:var(--ink-dim); text-align:right; line-height:1.7; }
+  .truth-note{
+    font-size:11.5px; color:var(--ink-faint); background:var(--panel-2); border:1px solid var(--border-soft);
+    border-radius:8px; padding:8px 12px; margin-top:8px;
+  }
+  .truth-banner{
+    font-family:var(--font-mono); font-size:10.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase;
+    color:var(--amber); background:#c2a94f14; border:1px solid #c2a94f40; border-radius:8px;
+    padding:9px 14px; margin-bottom:28px; text-align:center;
+  }
+  @media (max-width:520px){
+    .four-up{ grid-template-columns:repeat(2,1fr); }
+    .stat-row{ grid-template-columns:1fr; }
+    footer{ flex-direction:column; align-items:flex-start; }
+    footer .contacts{ text-align:left; }
+  }
+</style>
+
+<div class="page">
+
+  <div class="brand">
+    <span class="mark">PRE<b>//</b>OOPS</span>
+    <span class="doc-tag">Pilot brief · v1</span>
+  </div>
+  <h1>Campus Fesztivál — pilot javaslat</h1>
+  <p class="subtitle">Valós idejű, AI-alapú <i>physical intelligence</i> rendszer — egyoldalas összefoglaló a 90 másodperces bemutatóhoz: miért illik a Campushoz, mit old meg, mekkora a becsült volumen, és hogyan indulna a pilot.</p>
+  <div class="truth-banner">Független Campus Fesztivál pilot koncepció · Kontrollált visszajátszás · Nem élő deployment</div>
+
+  <section>
+    <div class="card" style="border-color:#c9414f33;background:#c9414f0d;">
+      <div class="mech" style="margin:0;color:var(--ink);">121 000 látogató, 20 helyszín, 4 nap Debrecen Nagyerdejében — ekkora léptéken egy-egy helyszíni probléma nem egyetlen pontot érint, hanem percek alatt több, egymástól távoli helyszínen jelentkezik egyszerre. Ez pontosan az a helyzet, ahol a hely, idő és tartalom szerinti automatikus összekapcsolás nem kényelem, hanem az egyetlen mód arra, hogy időben lássák: ugyanaz a probléma-e, vagy öt különálló.</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Miért most</h2>
+    <div class="card">
+      <ul class="evidence-list">
+        <li><span class="n">1</span><span>A Campus Fesztivál saját, nyilvános Házirendje <b>nem határoz meg dedikált panasz- vagy visszajelzési csatornát</b> — az egyetlen megadott elérhetőség egy általános „további kérdés esetén" e-mail cím (info@campusfesztival.hu). Helyszíni, valós idejű probléma esetére nincs dokumentált útvonal.</span></li>
+        <li><span class="n">2</span><span>Ugyanez a Házirend egy <b>kötelező, 500 forintos betétdíjas újrahasználható pohárrendszert</b> ír elő minden kereskedelmi egységnél, valamint egy névtelen, feltölthető UNIPASS kártyás fizetési rendszert — vagyis a vendég teljes mértékben ezen körforgásos rendszerek működésére van utalva egy italért is.</span></li>
+        <li><span class="n">3</span><span>A helyszín a Nagyerdő védett parkterületén fekszik, ahol a Házirend külön kiemeli a <b>természeti értékek védelmét</b> — egy pohár-körforgás vagy hulladékkezelési fennakadás itt nem csak kényelmetlenség, hanem közvetlenül a helyszín saját fenntarthatósági vállalását érinti.</span></li>
+      </ul>
+      <div class="conclusion">→ A PRE//OOPS nem egy hiányzó panaszvonalat pótol, hanem azt a <b>valós idejű, helyszíni jelzésbefogadási réteget</b> adja hozzá, amire egy 20 helyszínes, 121 000 fős rendezvényen — pontosan a saját körforgásos rendszerei miatt — szükség van.</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Mit csinál a PRE//OOPS</h2>
+    <p class="mech">A vendégektől és a stábtól érkező rövid, pontatlan jelzéseket <b>hely, idő és tartalom</b> alapján kapcsolja össze — tíz szétszórt üzenet helyett egyetlen, kezelhető incidenst mutatva az operációnak.</p>
+    <div class="four-up">
+      <div class="cell"><div class="k">1</div><div class="v">Mi történik</div></div>
+      <div class="cell"><div class="k">2</div><div class="v">Hol alakul ki</div></div>
+      <div class="cell"><div class="k">3</div><div class="v">Milyen gyorsan súlyosbodik</div></div>
+      <div class="cell"><div class="k">4</div><div class="v">Melyik csapat reagáljon</div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Marketing — a közösségi médiás rés lezárása</h2>
+    <p class="mech">Az egyetemista közönség már ma is használ digitális rendszereket a helyszínen — kártyás fizetés, UNIPASS feltöltés, pohár-visszaváltás. Egy QR-alapú, súrlódásmentes jelzés pontosan ugyanebbe a digitális-first élménybe illik. 10 másodperces jelzés, azonnali visszajelzéssel, hogy valaki intézkedik — ez fordítja meg a „panasz a Facebookon vagy TikTokon" mintát egy gyorsabb, láthatóbb <b>scan-to-fix</b> élménnyé.</p>
+  </section>
+
+  <section>
+    <h2>Nyilvános dashboard — bizalomépítés, nem kockázat</h2>
+    <p class="mech">A térkép élőben kikerülhet egy nyilvános kijelzőre is, szándékosan óvatosan tervezve: nem nyers panaszszöveg, hanem egy elvont, absztrakt élő térkép mozgással és színekkel, plusz egy késleltetett, csak megoldott ügyeket mutató összesítő — pl. „410 probléma megoldva ma, átlag 6 perc alatt". Egy 20 helyszínes rendezvényen ez konkrét, mérhető bizonyíték arra, hogy a fenntarthatósági rendszerek (pohár, hulladék) valóban működnek.</p>
+  </section>
+
+  <section>
+    <h2>Becsült volumen — 121 000 fő, teljes rendezvény</h2>
+    <div class="card">
+      <div class="stat-row">
+        <div class="stat">
+          <div class="k">Ma — nem dokumentált</div>
+          <div class="v">182–605</div>
+          <div class="d">a rendezvény alatt · becsült, csatorna nélkül</div>
+        </div>
+        <div class="stat accent">
+          <div class="k">PRE//OOPS jelzés</div>
+          <div class="v">1 210–3 630</div>
+          <div class="d">a rendezvény alatt · QR, alacsony súrlódás</div>
+        </div>
+        <div class="stat">
+          <div class="k">Egyedi incidens</div>
+          <div class="v">~150–725</div>
+          <div class="d">a rendezvény alatt · klaszterezés után</div>
+        </div>
+      </div>
+      <div class="ramp"></div>
+      <div class="ramp-lbl"><span>alacsony becslés</span><span>magas becslés</span></div>
+      <p class="estimate-note">Modell, nem előrejelzés — a feltételezett arányokat (0,15–0,5% informálisan eljutna valakihez, 1–3% PRE//OOPS-szel befogott, ~5–8 jelzés/incidens) a shadow pilot valós adata váltja fel. A 121 000 fő a nyilvánosan közölt résztvevőszám.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>A pilot felépítése</h2>
+    <div class="phases">
+      <div class="phase">
+        <div class="rail"><div class="dot" style="background:var(--cyan)"></div><div class="line"></div></div>
+        <div class="body"><div class="ph-name">0 · Shadow</div><div class="ph-desc">Meglévő jelzésfolyamok csendes megfigyelése (helyszíni stáb, biztonsági szolgálat, közösségi média) — nincs vendég felé kommunikáció, csak pontossági validáció a valós kimenetekhez képest.</div></div>
+      </div>
+      <div class="phase">
+        <div class="rail"><div class="dot" style="background:var(--amber)"></div><div class="line"></div></div>
+        <div class="body"><div class="ph-name">1 · Soft launch</div><div class="ph-desc">QR-alapú bejelentés a kezdő fókuszterületeken (a Nagyerdei Víztorony és a Loki Bisztró bárjai, a II. kapu, a kemping) — látható visszajelzéssel, hogy a jelzés célba ért.</div></div>
+      </div>
+      <div class="phase">
+        <div class="rail"><div class="dot" style="background:var(--pink)"></div></div>
+        <div class="body"><div class="ph-name">2 · Teljes rendezvényes kampány</div><div class="ph-desc">Mind a 20 helyszínre kiterjesztve, ha a soft launch igazolja a pontosságot és a vendégelfogadást.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Első fókuszterület</h2>
+    <div class="scope-row">
+      <span class="scope-chip"><span class="sw" style="background:var(--teal)"></span>Pohár-körforgás</span>
+      <span class="scope-chip"><span class="sw" style="background:var(--violet)"></span>Bejárati torlódás</span>
+      <span class="scope-chip"><span class="sw" style="background:var(--amber)"></span>UNIPASS feltöltőpontok</span>
+      <span class="scope-chip"><span class="sw" style="background:var(--cyan)"></span>Kempingi vízellátás</span>
+    </div>
+    <p class="truth-note">A pohár-betétdíjas rendszer és az UNIPASS kártya a Campus saját Házirendjében már ma is rögzített, valós működési modell — ez a négy fókuszterület nem feltételezés, hanem a fesztivál saját, publikált infrastruktúrájára épül.</p>
+  </section>
+
+  <div class="cta">
+    <div class="lead">Következő lépés a 2027-es szezon előtt</div>
+    <div class="sub">Az első lépés alacsony költségű és alacsony kockázatú — a végleges ár és ütemezés csak közös pilot-design után kerül rögzítésre. Addig a demó és ez a brief bármikor megnézhető.</div>
+    <div class="steps">
+      <span class="step">20-30 perc · discovery</span>
+      <span class="arrow">→</span>
+      <span class="step">90 mp · kontrollált replay</span>
+      <span class="arrow">→</span>
+      <span class="step">pilot-design workshop</span>
+    </div>
+  </div>
+
+  <footer>
+    <div class="who">
+      <div><b>Dr. Börcs Attila, PhD</b></div>
+      <div class="role">Alapító, PRE//OOPS — cégalapítás alatt</div>
+    </div>
+    <div class="contacts">
+      +36 30 963 6139<br>
+      <a href="https://www.linkedin.com/in/attila-borcs/" style="color:inherit;">linkedin.com/in/attila-borcs</a><br>
+      <a href="mailto:attila.borcs@gmail.com" style="color:inherit;">attila.borcs@gmail.com</a>
+    </div>
+  </footer>
+
+</div>
