@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PRE//OOPS — Arena Mall (deck.gl, emeleti nézet)</title>
+<script src="https://api.mapbox.com/mapbox-gl-js/v3.29.0/mapbox-gl.js"></script>
+<link href="https://api.mapbox.com/mapbox-gl-js/v3.29.0/mapbox-gl.css" rel="stylesheet">
+<script src="https://unpkg.com/deck.gl@9.1.14/dist.min.js"></script>
+<style>
+  :root{
+    /* "Architectural digital-twin" concept, v2: the first pass borrowed
+       iOS's stock system colors wholesale — functional, but generic, and
+       it put a full rainbow on screen at all times with nothing held in
+       reserve for genuine urgency. Rebuilt around research into current
+       (2026) dashboard practice — restrained, elevated-neutral palettes
+       with color spent deliberately, not decoratively — and around this
+       project's OWN pre-existing "thermal priority" ramp (calm blue → hot
+       red, already used for the incident severity legend elsewhere in
+       this demo set), extended here to also carry floor identity: cooler
+       near the ground, warmer higher up, so the palette tells a spatial
+       story instead of an arbitrary one. True saturated red is spent on
+       exactly one thing now — a live, unresolved incident — never on
+       decoration, matching what an operator actually needs to scan for.
+       Warm stone backdrop replaces the previous cool iOS blue-white,
+       per the same research (elevated neutrals: soft grey/stone/oatmeal
+       over stark white). */
+    --bg:#f2ede4;
+    --glass:rgba(255,253,249,0.68); --glass-strong:rgba(255,253,249,0.85);
+    --glass-border:rgba(255,255,255,0.6); --hairline:rgba(52,42,30,0.12);
+    --ink:#241f1a; --ink-dim:#6f665c; --ink-faint:#948a7d;
+    --accent:#2c6e8e; --urgent:#c9414f;
+    --shadow:0 8px 30px rgba(40,30,20,0.10), 0 1px 2px rgba(40,30,20,0.06);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Inter","Segoe UI",sans-serif}
+  #app{position:fixed;inset:0;display:flex;flex-direction:column}
+
+  .glass{
+    background:var(--glass);backdrop-filter:blur(22px) saturate(180%);
+    -webkit-backdrop-filter:blur(22px) saturate(180%);
+    border:1px solid var(--glass-border);box-shadow:var(--shadow);
+  }
+
+  header{
+    display:flex;align-items:center;gap:16px;padding:12px 18px;
+    z-index:5;flex-wrap:wrap;border-radius:0 0 18px 18px;border-top:none;
+  }
+  .word{font-weight:800;letter-spacing:.01em;font-size:16px}
+  .word b{color:var(--accent)}
+  .titles{display:flex;flex-direction:column;line-height:1.25;margin-right:auto}
+  .titles .t{font-weight:700;font-size:14.5px;color:var(--ink)}
+  .titles .s{font-size:11.5px;color:var(--ink-dim)}
+  .engine-badge{
+    font-size:10.5px;letter-spacing:.03em;text-transform:uppercase;color:#1c5064;
+    background:rgba(44,110,142,0.12);border:1px solid rgba(44,110,142,0.28);
+    border-radius:20px;padding:4px 10px;font-weight:600;
+  }
+  .floor-toggle{display:flex;gap:6px}
+  .fchip{
+    font-size:12px;padding:6px 13px;border-radius:20px;border:1px solid var(--hairline);
+    background:rgba(120,110,95,0.08);color:var(--ink-dim);cursor:pointer;user-select:none;
+    display:flex;align-items:center;gap:6px;transition:all .15s;font-weight:500;
+  }
+  .fchip:hover{background:rgba(120,110,95,0.14)}
+  .fchip .sw{width:9px;height:9px;border-radius:3px;display:inline-block}
+  .fchip.active{color:#fff;border-color:transparent;background:var(--accent);box-shadow:0 2px 8px rgba(44,110,142,0.35)}
+
+  main{flex:1;position:relative;display:flex;overflow:hidden}
+  #map{position:absolute;inset:0}
+
+  .notice{
+    position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:4;
+    font-size:11px;letter-spacing:.02em;color:#8a5a00;padding:6px 14px;border-radius:20px;
+    background:rgba(255,204,0,0.22);border:1px solid rgba(255,180,0,0.4);
+    backdrop-filter:blur(10px);font-weight:600;
+  }
+
+  aside{
+    width:308px;min-width:308px;padding:16px;overflow-y:auto;z-index:3;
+    display:flex;flex-direction:column;gap:14px;border-radius:18px 0 0 18px;border-right:none;
+  }
+  .card{background:var(--glass-strong);border:1px solid var(--hairline);border-radius:16px;
+    padding:14px 15px;box-shadow:0 1px 3px rgba(30,30,40,0.05)}
+  .card h3{margin:0 0 10px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);font-weight:700}
+  .legend-row{display:flex;align-items:center;gap:9px;padding:5px 0;font-size:12.5px}
+  .legend-row .sw{width:13px;height:13px;border-radius:4px;flex:none}
+  .legend-row .lbl{flex:1;color:var(--ink)}
+  .legend-row .cnt{color:var(--ink-faint);font-variant-numeric:tabular-nums;font-size:11.5px}
+
+  .inc-badge{
+    display:inline-block;font-size:10px;letter-spacing:.04em;text-transform:uppercase;
+    padding:3px 9px;border-radius:20px;margin-bottom:8px;font-weight:700;
+  }
+  .inc-badge.watch{background:rgba(142,142,147,0.16);color:#636366}
+  .inc-badge.open{background:rgba(255,59,48,0.14);color:#d70015}
+  .inc-badge.resolved_pending{background:rgba(255,149,0,0.16);color:#c76900}
+  .inc-badge.verified{background:rgba(52,199,89,0.16);color:#1a8a3d}
+  .inc-title{font-size:14px;font-weight:700;margin:0 0 3px;color:var(--ink)}
+  .inc-meta{font-size:11px;color:var(--ink-faint);margin-bottom:10px}
+  .inc-log{font-size:12px;color:var(--ink-dim);display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+  .inc-log li{padding-left:12px;position:relative}
+  .inc-log li::before{content:"";position:absolute;left:0;top:6px;width:5px;height:5px;border-radius:50%;background:var(--ink-faint)}
+  .inc-log li b{color:var(--ink)}
+  .inc-empty{font-size:12px;color:var(--ink-faint);padding:4px 0}
+  .inc-other{font-size:11px;color:var(--ink-faint);margin-top:8px;padding-top:8px;border-top:1px solid var(--hairline)}
+
+  .domain-row{display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 0;color:var(--ink)}
+  .domain-row .sw{width:10px;height:10px;border-radius:50%;flex:none}
+
+  footer{
+    padding:9px 16px;font-size:10.5px;color:var(--ink-faint);z-index:5;
+    display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-radius:18px 18px 0 0;border-bottom:none;
+  }
+
+  .dl-tt{
+    background:rgba(255,255,255,0.92);backdrop-filter:blur(14px);border:1px solid var(--hairline);
+    border-radius:10px;padding:8px 11px;font-size:12px;color:var(--ink);max-width:220px;
+    pointer-events:none;box-shadow:var(--shadow);
+  }
+  .dl-tt .zn{font-weight:700;margin-bottom:2px}
+  .dl-tt .fl{color:var(--ink-dim);font-size:11px}
+
+  /* Solid background, no backdrop-filter: this element is a Mapbox marker
+     — Mapbox applies its own `transform: translate3d(...)` directly on it
+     for positioning, and combined with backdrop-filter that produced a
+     div that reported fully visible (opacity 1, in the DOM, on top of the
+     stack) yet painted nothing at all, confirmed by a pixel-level
+     screenshot crop. Same "correct per every API check, invisible on
+     screen" signature as the earlier deck.gl TextLayer bug this session —
+     dropping the one advanced-compositing property fixes it. */
+  .zone-label{
+    font-size:11px;color:var(--ink);background:#ffffff;border:1px solid var(--hairline);
+    border-radius:20px;padding:3px 9px;white-space:nowrap;pointer-events:none;
+    transition:opacity .2s;font-weight:500;box-shadow:0 1px 4px rgba(30,30,40,0.12);
+  }
+
+  /* ---- Replay bar ---- */
+  .replay-bar{
+    position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:4;
+    display:flex;align-items:center;gap:12px;padding:9px 16px 9px 9px;border-radius:26px;
+    width:min(620px, calc(100% - 40px));
+  }
+  .play-btn{
+    width:34px;height:34px;border-radius:50%;border:none;background:var(--accent);color:#fff;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;
+    box-shadow:0 2px 8px rgba(44,110,142,0.4);font-size:13px;transition:transform .1s;
+  }
+  .play-btn:active{transform:scale(0.92)}
+  .clock{font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--ink-dim);flex:none;width:38px;font-weight:600}
+  .track{flex:1;height:20px;display:flex;align-items:center;cursor:pointer;position:relative}
+  .track::before{content:"";position:absolute;left:0;right:0;height:5px;border-radius:3px;background:rgba(120,110,95,0.18)}
+  .track-fill{position:absolute;left:0;height:5px;border-radius:3px;background:var(--accent);pointer-events:none}
+  .track-thumb{
+    position:absolute;width:15px;height:15px;border-radius:50%;background:#fff;
+    box-shadow:0 1px 4px rgba(30,30,40,0.3),0 0 0 1px rgba(0,0,0,0.06);pointer-events:none;
+    transform:translateX(-50%);
+  }
+  .live-pill{
+    font-size:10px;letter-spacing:.04em;font-weight:700;padding:3px 9px;border-radius:20px;flex:none;
+    background:rgba(255,59,48,0.12);color:#d70015;transition:all .2s;
+  }
+  .live-pill.replaying{background:rgba(120,120,128,0.14);color:var(--ink-faint)}
+  .live-pill .dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:currentColor;margin-right:4px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="glass">
+    <div class="titles">
+      <span class="word">PRE<b>//</b>OOPS</span>
+    </div>
+    <div class="titles">
+      <span class="t">Arena Mall — emeleti nézet</span>
+      <span class="s">2027. jan. · szombati csúcsforgalom · valódi épületkontúr, valódi szintadatok</span>
+    </div>
+    <span class="engine-badge">render motor: deck.gl</span>
+    <div class="floor-toggle" id="floorToggle"></div>
+  </header>
+
+  <main>
+    <div id="map"></div>
+    <div class="notice">⚠ SZABÁLYOZOTT VISSZAJÁTSZÁS — ILLUSZTRATÍV JELZÉSEK, VALÓDI ÉPÜLET- ÉS SZINTADATOK</div>
+
+    <div class="replay-bar glass">
+      <button class="play-btn" id="playBtn">▶</button>
+      <span class="clock" id="clockStart">10:00</span>
+      <div class="track" id="track">
+        <div class="track-fill" id="trackFill"></div>
+        <div class="track-thumb" id="trackThumb"></div>
+      </div>
+      <span class="clock" id="clockNow">11:35</span>
+      <span class="live-pill" id="livePill"><span class="dot"></span>ÉLŐ</span>
+    </div>
+
+    <aside class="glass">
+      <div class="card">
+        <h3>Szintek</h3>
+        <div id="legendList"></div>
+      </div>
+
+      <div class="card" id="incCard">
+        <h3>Kiemelt incidens</h3>
+        <div id="incBody"></div>
+      </div>
+
+      <div class="card">
+        <h3>Domain jelmagyarázat</h3>
+        <div id="domainList"></div>
+      </div>
+
+      <div class="card">
+        <h3>Miért deck.gl</h3>
+        <p style="font-size:11.5px;color:var(--ink-dim);line-height:1.5;margin:0">
+          A korábbi Mapbox Standard-style próbálkozásban a saját emelet-rétegek
+          nem íródtak ki a stílus belső "import" rétege fölé. A deck.gl saját
+          WebGL overlay-je nem ettől függ — ugyanaz a valódi épületkontúr,
+          valódi OSM szintadatok, most ténylegesen látható rétegenként.
+        </p>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="glass">
+    <span>Forrás: OpenStreetMap (way 25268421, ODbL 1.0) — valódi épületkontúr és emeletjelölések (level=)</span>
+    <span>PRE//OOPS demo · nem éles rendszer</span>
+  </footer>
+</div>
+
+<script>
+mapboxgl.accessToken = "pk.eyJ1IjoiYXR0aWxhYm9yY3MiLCJhIjoiY21hdjR4aDNpMDBzbDJucXk0ZTU3MHRxcCJ9.H_WGKvSEPp_tm7QliaKQBQ";
+
+const SITE_BOUNDARY = [[19.0894142,47.4989447],[19.0896479,47.4989443],[19.0896476,47.4988581],[19.0897986,47.4988578],[19.0906812,47.4988564],[19.0906815,47.4989426],[19.0907057,47.4989426],[19.0910399,47.498942],[19.0910909,47.498942],[19.0914359,47.4989414],[19.0914356,47.4988571],[19.0926002,47.4988553],[19.0926005,47.4989395],[19.0926779,47.4989394],[19.0927778,47.4989392],[19.0928491,47.4989391],[19.0929091,47.498939],[19.0929087,47.4988469],[19.0943142,47.4988446],[19.0943137,47.4986963],[19.0943117,47.4981509],[19.0943107,47.49787],[19.0943106,47.4978429],[19.0893975,47.4978509],[19.0893985,47.4981093],[19.089366,47.4981094],[19.089367,47.4983717],[19.0894121,47.4983716],[19.089413,47.4986191],[19.0894142,47.4989447]];
+
+const ZONES = [
+  { id:"west-wing",      name:"Nyugati szárny – Peek & Cloppenburg", lng:19.0900403, lat:47.4980187, floor:0 },
+  { id:"cinema",         name:"Cinema City Arena",                   lng:19.0903664, lat:47.4984388, floor:2 },
+  { id:"central-atrium", name:"Központi átrium – Massimo Dutti",     lng:19.0918909, lat:47.498184,  floor:0 },
+  { id:"north-corridor", name:"Északi sor – Douglas",                lng:19.0921834, lat:47.4984572, floor:0 },
+  { id:"east-food",      name:"Keleti étkezőudvar – Tesco",          lng:19.0935207, lat:47.4985715, floor:0 },
+  { id:"east-wing",      name:"Keleti szárny – Primark",             lng:19.0940478, lat:47.4986603, floor:1 },
+  { id:"fashion-l1",     name:"Divatsor (1. emelet) – Zara",         lng:19.0926957, lat:47.4984971, floor:1 },
+];
+const FLAGSHIP_ZONE = "central-atrium";
+
+const FACILITIES = [
+  { name:"Mosdó – Központi átrium mellett", subtype:"toilet",   lng:19.091750, lat:47.498250, floor:0 },
+  { name:"Mosdó – Cinema City mellett",     subtype:"toilet",   lng:19.090550, lat:47.498500, floor:0 },
+  { name:"Főbejárat – Kerepesi út",         subtype:"entrance", lng:19.089950, lat:47.498100, floor:0 },
+  { name:"P2 mozgássérült parkoló",         subtype:"parking",  lng:19.093200, lat:47.497950, floor:0 },
+  { name:"Információs pult",                subtype:"info",     lng:19.091900, lat:47.498350, floor:0 },
+];
+
+// Real complaint corpus, ported verbatim from customers/arena-mall.mjs —
+// same engine semantics as every other customer demo in this project
+// (computeLifecycle/buildIncidentsAtTime below are ported from
+// template.html unchanged), now actually driving a live replay instead of
+// a single static snapshot.
+const CLOCK_START = 10 * 60;
+const RAW_SIGNALS = [
+  { t:0,  zone:"central-atrium", lang:"hu", domain:"water", text:"Nincs papír a földszinti mosdóban." },
+  { t:2,  zone:"central-atrium", lang:"en", domain:"water", text:"No paper towels in the ground floor restroom." },
+  { t:5,  zone:"central-atrium", lang:"hu", domain:"water", text:"Ugyanaz, még mindig nincs kéztörlő.", duplicate:true },
+  { t:9,  zone:"central-atrium", lang:"en", domain:"water", text:"One stall now locked, out of order sign on it." },
+  { t:14, zone:"central-atrium", lang:"hu", domain:"water", text:"Megint lezárták az egyik fülkét." },
+  { t:21, zone:"central-atrium", lang:"de", domain:"water", text:"Eine Kabine ist wieder gesperrt, kein Papier." },
+  { t:33, zone:"central-atrium", lang:"en", domain:"water", text:"Cleaning staff on site, restocking now." },
+  { t:38, zone:"central-atrium", lang:"hu", domain:"water", text:"Fülke újra nyitva, van papír.", resolution:true },
+  { t:39, zone:"central-atrium", lang:"en", domain:"water", text:"Restroom fully stocked and stall reopened.", resolution:true },
+
+  { t:6,  zone:"cinema", lang:"en", domain:"water", text:"Restroom by the cinema is out of paper too." },
+  { t:11, zone:"cinema", lang:"hu", domain:"water", text:"A mozi melletti mosdóban sincs kéztörlő." },
+  { t:19, zone:"cinema", lang:"en", domain:"water", text:"Same issue here, nobody's restocked it yet." },
+
+  { t:28, zone:"cinema", lang:"hu", domain:"crowd", text:"Nagy a sor a mozi jegypénztárnál." },
+  { t:31, zone:"cinema", lang:"en", domain:"crowd", text:"Long queue building at the cinema box office." },
+  { t:40, zone:"cinema", lang:"en", domain:"crowd", text:"Only one till open, queue backing into the corridor." },
+  { t:52, zone:"cinema", lang:"de", domain:"crowd", text:"Schlange vor dem Kino reicht bis in den Gang." },
+  { t:70, zone:"cinema", lang:"en", domain:"crowd", text:"Second till opened, queue still long before the matinee." },
+
+  { t:15, zone:"north-corridor", lang:"hu", domain:"payment", text:"Nem megy a kártyás fizetés a Douglas-nál." },
+  { t:17, zone:"north-corridor", lang:"en", domain:"payment", text:"Card terminal down at the perfumery." },
+  { t:24, zone:"north-corridor", lang:"en", domain:"payment", text:"Still cash only, small queue forming at the till." },
+  { t:41, zone:"north-corridor", lang:"hu", domain:"payment", text:"Terminál kicserélve, újra megy a kártya.", resolution:true },
+
+  { t:20, zone:"east-food", lang:"hu", domain:"waste", text:"Tele van a szemetes az étkezőudvarnál." },
+  { t:23, zone:"east-food", lang:"en", domain:"waste", text:"Bin overflowing near the food court tables." },
+  { t:44, zone:"east-food", lang:"en", domain:"waste", text:"Cleaned and emptied now.", resolution:true },
+
+  { t:12, zone:"west-wing", lang:"hu", domain:"water", text:"Csöpög a csap a nyugati szárny mosdójában." },
+  { t:16, zone:"west-wing", lang:"en", domain:"water", text:"Tap dripping in the west wing restroom." },
+
+  { t:0,  zone:"west-wing", lang:"hu", domain:"crowd", text:"Hosszú sor a nyugati bejáratnál nyitáskor." },
+  { t:3,  zone:"west-wing", lang:"en", domain:"crowd", text:"Long line at the west entrance right at opening." },
+  { t:18, zone:"west-wing", lang:"en", domain:"crowd", text:"Queue clearing, most people already inside now." },
+  { t:25, zone:"west-wing", lang:"hu", domain:"crowd", text:"Bejáratnál minden rendben.", resolution:true },
+
+  { t:45, zone:"east-wing", lang:"en", domain:"payment", text:"Self-checkout card reader not working at Primark." },
+  { t:49, zone:"east-wing", lang:"hu", domain:"payment", text:"Az önkiszolgáló kasszánál sem megy a kártya." },
+
+  { t:78, zone:"east-food", lang:"hu", domain:"water", text:"Beázás a mennyezetnél az étkezőudvar fölött." },
+  { t:82, zone:"east-food", lang:"en", domain:"water", text:"Ceiling leak above the food court seating." },
+  { t:87, zone:"east-food", lang:"en", domain:"water", text:"Confirmed, bucket placed, maintenance called." },
+
+  { t:60, zone:"east-food", lang:"hu", domain:"crowd", text:"Hosszú sor az étkezőudvar népszerűbb pultjainál." },
+  { t:64, zone:"east-food", lang:"en", domain:"crowd", text:"Long lines at the busier food court counters." },
+  { t:81, zone:"east-food", lang:"de", domain:"crowd", text:"Schlangen am Food Court werden länger." },
+
+  { t:55, zone:"central-atrium", lang:"hu", domain:"waste", text:"Túlcsordult a szemetes a központi átriumban." },
+  { t:59, zone:"central-atrium", lang:"en", domain:"waste", text:"Bin overflowing in the central atrium." },
+  { t:74, zone:"central-atrium", lang:"en", domain:"waste", text:"Emptied and cleaned.", resolution:true },
+
+  { t:48, zone:"fashion-l1", lang:"hu", domain:"crowd", text:"Hosszú sor a próbafülkéknél." },
+  { t:53, zone:"fashion-l1", lang:"en", domain:"crowd", text:"Long wait for the fitting rooms upstairs." },
+];
+const MERGE_RULES = [{ a:"central-atrium::water", b:"cinema::water", at:26 }];
+
+const FLOOR_H = 4.6;      // real-scale retail floor-to-floor height, meters
+const FLOOR_T = 2.2;      // slab thickness, meters
+const FLOOR_LABEL = ["Földszint", "1. emelet", "2. emelet (Cinema City)"];
+// Three points sampled from this project's own "thermal priority" ramp
+// (the same calm-blue → hot-red scale used for incident severity in every
+// other customer demo this session), used here to carry floor identity
+// instead: cooler at ground level, warmer higher up — the palette reads
+// as a real vertical gradient through the building, not three arbitrary
+// picks. Stops deliberately short of the ramp's hottest red — that's kept
+// in reserve, spent only on a genuinely live incident (see --urgent /
+// incident-markers below), never on a floor that's simply doing fine.
+const FLOOR_COLOR = [[92,133,158], [196,168,96], [199,138,86]];
+const FLOOR_HEX   = ["#5c859e", "#c4a860", "#c78a56"];
+
+// Domain colors stay visually distinct from the muted, architectural
+// floor palette by register, not just hue: floors are structure (muted,
+// desaturated), domains are signal (fully saturated jewel tones) — so an
+// incident dot always reads as "data" against the calmer building it
+// sits on, per the layering principle from real cluster-marker patterns
+// (magnitude/urgency should pop, the base map should recede).
+const DOMAIN_META = {
+  water:   { label:"Víz / Higiénia",       hex:"#1f8fe0" },
+  crowd:   { label:"Tömeg / Sorban állás", hex:"#9b3fe8" },
+  waste:   { label:"Hulladék",             hex:"#14b866" },
+  payment: { label:"Fizetés / Kártya",     hex:"#f2a30f" },
+};
+
+const STATE_LABEL = { watch:"Megfigyelés", open:"Nyitott", resolved_pending:"Megoldva (függőben)", verified:"Ellenőrizve" };
+const SEV_ORDER = { critical:0, high:1, medium:2, low:3 };
+const STATE_ORDER = { open:0, resolved_pending:1, watch:2, verified:3 };
+const T_MIN = 0, T_MAX = 95;
+
+function fmtClock(vt){
+  const total = CLOCK_START + Math.round(vt);
+  const h = Math.floor(total/60)%24, m = ((total%60)+60)%60;
+  return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
+}
+
+// ---- Incident engine, ported from template.html (same real semantics
+// every other customer demo in this project uses) ----
+function computeLifecycle(sigsAll, vt){
+  const independent = sigsAll.filter(s=>!s.duplicate);
+  const n = independent.length;
+  let state = "watch", resolvedAt=null;
+  if (n>=4) state = "open";
+  const resSignals = sigsAll.filter(s=>s.resolution);
+  if (state==="open" && resSignals.length){
+    state = "resolved_pending";
+    resolvedAt = resSignals[0].t;
+    const lastResTime = resSignals[resSignals.length-1].t;
+    if (vt - lastResTime >= 8) state = "verified";
+  }
+  const sev = n>=7 ? "critical" : n>=4 ? "high" : n>=2 ? "medium" : "low";
+  return { state, sev, support:n, firstSignal:sigsAll[0].t, lastSignal:sigsAll[sigsAll.length-1].t, resolvedAt };
+}
+function incidentTitle(domain, zoneName){
+  const m = {
+    water: `Vízkimaradás — ${zoneName}`,
+    waste: `Hulladék túlcsordulás — ${zoneName}`,
+    crowd: `Tömegtorlódás — ${zoneName}`,
+    payment: `Fizetési hiba — ${zoneName}`,
+  };
+  return m[domain] || `Incidens — ${zoneName}`;
+}
+function buildIncidentsAtTime(vt){
+  const groups = {};
+  for (const s of RAW_SIGNALS){
+    if (s.t > vt) continue;
+    const key = s.zone + "::" + s.domain;
+    (groups[key] ||= []).push(s);
+  }
+  const mergedAway = {};
+  for (const rule of MERGE_RULES){
+    if (vt >= rule.at && groups[rule.a] && groups[rule.b]){
+      groups[rule.a] = groups[rule.a].concat(groups[rule.b]);
+      mergedAway[rule.a] = rule.b;
+      delete groups[rule.b];
+    }
+  }
+  const incidents = [];
+  for (const key in groups){
+    const sigsAll = groups[key].slice().sort((a,b)=>a.t-b.t);
+    const [zoneId, domain] = key.split("::");
+    const zone = ZONES.find(z=>z.id===zoneId);
+    const info = computeLifecycle(sigsAll, vt);
+    if (info.support < 2) continue;
+    const mergedFromZone = mergedAway[key] ? ZONES.find(z=>z.id===mergedAway[key].split("::")[0]).name : null;
+    incidents.push({ id:"INC-"+key.toUpperCase().replace(/[^A-Z0-9]+/g,"-"), key, zoneId, zone, domain, ...info, signals:sigsAll, title:incidentTitle(domain, zone.name), mergedFromZone });
+  }
+  return incidents.sort((a,b)=> (STATE_ORDER[a.state]-STATE_ORDER[b.state]) || (SEV_ORDER[a.sev]-SEV_ORDER[b.sev]) || (b.support-a.support));
+}
+
+const CENTER = [19.09185, 47.49835];
+const zoneFloorCounts = [0,1,2].map(fl => ZONES.filter(z => z.floor === fl).length);
+
+document.getElementById("legendList").innerHTML = FLOOR_LABEL.map((lbl, i) => `
+  <div class="legend-row">
+    <span class="sw" style="background:${FLOOR_HEX[i]}"></span>
+    <span class="lbl">${lbl}</span>
+    <span class="cnt">${zoneFloorCounts[i]} zóna</span>
+  </div>`).join("");
+
+document.getElementById("domainList").innerHTML = Object.values(DOMAIN_META).map(d => `
+  <div class="domain-row"><span class="sw" style="background:${d.hex}"></span>${d.label}</div>
+`).join("");
+
+let activeFloor = null; // null = all floors
+const chipsEl = document.getElementById("floorToggle");
+function renderChips(){
+  const items = [{ label:"Összes szint", floor:null }].concat(
+    FLOOR_LABEL.map((lbl, i) => ({ label: lbl, floor: i }))
+  );
+  chipsEl.innerHTML = items.map(it => `
+    <div class="fchip ${activeFloor===it.floor?'active':''}" data-floor="${it.floor}">
+      ${it.floor!==null ? `<span class="sw" style="background:${it.floor===activeFloor?'#fff':FLOOR_HEX[it.floor]}"></span>` : ""}${it.label}
+    </div>`).join("");
+  chipsEl.querySelectorAll(".fchip").forEach(el => {
+    el.onclick = () => {
+      const v = el.dataset.floor;
+      activeFloor = v === "null" ? null : Number(v);
+      renderChips();
+      updateLayers();
+    };
+  });
+}
+renderChips();
+
+const map = new mapboxgl.Map({
+  container: "map",
+  style: "mapbox://styles/mapbox/light-v11",
+  center: CENTER,
+  zoom: 17.15,
+  pitch: 62,
+  bearing: -18,
+  antialias: true,
+  attributionControl: false,
+});
+map.addControl(new mapboxgl.AttributionControl({ compact:true }));
+
+let overlay;
+map.on("load", () => {
+  // Light classic style — hide label clutter, everything else is
+  // light-v11's own real, already-light default palette (kept, rather
+  // than overridden, to match the "white concept" ask directly).
+  const HIDE = ["poi-label","airport-label","settlement-subdivision-label",
+    "settlement-minor-label","settlement-major-label","state-label",
+    "country-label","continent-label","natural-point-label",
+    "natural-line-label","water-point-label","water-line-label",
+    "waterway-label","road-label-simple"];
+  for (const id of HIDE) if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", "none");
+  // Flat, hidden "building" fill layer only — no 3D extrusion for
+  // surrounding buildings. Arena Mall itself is present in Mapbox's own
+  // composite building source with real height data, so a generic
+  // city-building extrusion layer would draw an opaque block directly over
+  // our own venue footprint, occluding the deck.gl floor plates underneath
+  // (confirmed: an earlier version of this file did exactly that).
+
+  // Real GL lighting instead of flat fills — a warm key light + cool fill
+  // light + soft ambient, combined with `material` on the floor plates
+  // below, gives each slab an actual glossy top-face highlight and shaded
+  // side walls (real Phong shading, not a solid color swatch) — the
+  // "rainbow cake" look: vivid, opaque, and lit like a physical object.
+  const lightingEffect = new deck.LightingEffect({
+    ambient: new deck.AmbientLight({ color: [255,255,255], intensity: 1.3 }),
+    key: new deck.PointLight({ color: [255,250,240], intensity: 0.35, position: [19.088, 47.5005, 400] }),
+    fill: new deck.PointLight({ color: [210,230,255], intensity: 0.2, position: [19.097, 47.4965, 250] }),
+  });
+
+  overlay = new deck.MapboxOverlay({
+    // Non-interleaved: nothing on the Mapbox side is 3D any more (the
+    // city-buildings extrusion was removed earlier this session for
+    // occluding the floor plates, and no terrain is set), so there is
+    // nothing left to depth-composite against. interleaved:true forces a
+    // per-frame Mapbox depth-buffer readback to support that compositing —
+    // real GPU cost for zero visual benefit here, and the likely main
+    // contributor to the stutter/flicker under sustained animation.
+    interleaved: false,
+    effects: [lightingEffect],
+    layers: buildLayers(),
+    getTooltip: ({object, layer}) => {
+      if (!object) return null;
+      if (layer && layer.id === "incident-markers") {
+        return { html: `<div class="dl-tt"><div class="zn">${object.title}</div><div class="fl">${FLOOR_LABEL[object.zone.floor]} · ${STATE_LABEL[object.state]} · ${object.support} jelzés</div></div>` };
+      }
+      if (layer && layer.id === "zone-base") {
+        return { html: `<div class="dl-tt"><div class="zn">${object.name}</div><div class="fl">${FLOOR_LABEL[object.floor]}</div></div>` };
+      }
+      return null;
+    },
+  });
+  map.addControl(overlay);
+
+  // Zone name labels as plain manually-positioned divs, not
+  // mapboxgl.Marker and not a deck.gl TextLayer.
+  //
+  // deck.gl's TextLayer (WebGL glyph atlas) rendered nothing at all under
+  // any configuration tried (background, pixelOffset, characterSet,
+  // fontFamily, depthTest), confirmed via an isolated single-label test
+  // page — that's why this uses plain DOM instead.
+  //
+  // mapboxgl.Marker was the first DOM attempt and looked right by every
+  // check (in the DOM, getBoundingClientRect returned real numbers,
+  // getComputedStyle said opacity:1, visibility:visible, on top of the
+  // stack) yet painted nothing — a pixel-level screenshot crop confirmed
+  // it. The actual cause, found by reading the element's live inline
+  // style: Mapbox GL JS v3 markers run their own per-frame occlusion
+  // opacity in a pitched 3D scene, and it was fighting this file's own
+  // opacity control — the two together landed on values that read as
+  // "basically visible" in the DOM but composited as essentially
+  // transparent. Bypassing mapboxgl.Marker entirely removes that fight:
+  // these are now plain divs in a fixed overlay, repositioned by hand
+  // from map.project() on every render, with opacity fully owned by this
+  // file and nothing else touching it.
+  const labelLayer = document.createElement("div");
+  // z-index:5 is load-bearing, not decoration: the deck.gl overlay canvas
+  // lives inside Mapbox's own `.mapboxgl-ctrl-top-left` control container,
+  // which Mapbox's stock CSS gives z-index:2. Without an explicit z-index
+  // here, this layer sits at the stacking-context equivalent of 0 and
+  // loses to that 2 regardless of DOM order — confirmed as the actual
+  // cause of the labels being invisible: they weren't hidden by opacity
+  // or a CSS mistake, they were being fully painted over by deck.gl's own
+  // opaque content everywhere it drew anything, and only showed (faintly)
+  // over the plain basemap where deck.gl painted nothing.
+  labelLayer.style.cssText = "position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:5;";
+  document.getElementById("map").appendChild(labelLayer);
+  for (const z of ZONES) {
+    const el = document.createElement("div");
+    el.className = "zone-label";
+    el.textContent = z.name;
+    el.style.position = "absolute";
+    z._labelEl = el;
+    labelLayer.appendChild(el);
+  }
+  function positionZoneLabels(){
+    for (const z of ZONES) {
+      if (!z._labelEl) continue;
+      const p = map.project([z.lng, z.lat]);
+      z._labelEl.style.transform = `translate(${p.x}px, ${p.y - 24}px) translate(-50%, -100%)`;
+    }
+  }
+  map.on("render", positionZoneLabels);
+  positionZoneLabels();
+  updateZoneLabels();
+  initReplay();
+});
+
+function updateZoneLabels(){
+  for (const z of ZONES) {
+    if (!z._labelEl) continue;
+    const on = activeFloor === null || activeFloor === z.floor;
+    z._labelEl.style.opacity = on ? "1" : "0.16";
+  }
+}
+
+function buildLayers(){
+  const floors = [0,1,2];
+  const floorData = floors.map(fl => ({
+    floor: fl,
+    polygon: SITE_BOUNDARY.map(([lng,lat]) => [lng, lat, fl*FLOOR_H]),
+  }));
+
+  const boundaryPath = [SITE_BOUNDARY.map(([lng,lat]) => [lng,lat,0])];
+
+  // Every floor slab spans the full real building footprint (only OSM's
+  // single ground-level outline exists, not distinct per-floor
+  // footprints), so any marker sitting at its own floor's height is
+  // geometrically buried under every slab stacked above it when viewed
+  // from outside/above. Fix: float every marker above the tallest floor
+  // and drop a thin vertical stem down to its real floor slab, like a pin
+  // flag — the marker stays visible, the stem shows its real floor.
+  const READABLE_Z = 3*FLOOR_H + 3;
+  const zoneBase = ZONES.map(z => ({
+    ...z,
+    pos: [z.lng, z.lat, READABLE_Z],
+    stem: [[z.lng, z.lat, z.floor*FLOOR_H + FLOOR_T], [z.lng, z.lat, READABLE_Z]],
+  }));
+
+  // Incident markers: one per currently-live zone::domain incident, offset
+  // slightly per zone when more than one incident shares a zone (real
+  // data: central-atrium carries both a water and a later waste story) so
+  // they never fully overlap.
+  const byZone = {};
+  for (const inc of INCIDENTS_NOW) (byZone[inc.zoneId] ||= []).push(inc);
+  const incidentData = [];
+  for (const zoneId in byZone){
+    byZone[zoneId].forEach((inc, i) => {
+      const jitter = (i - (byZone[zoneId].length-1)/2) * 0.00016;
+      incidentData.push({ ...inc, pos:[inc.zone.lng + jitter, inc.zone.lat, READABLE_Z] });
+    });
+  }
+
+  const facilityData = FACILITIES.map(f => ({
+    ...f,
+    pos: [f.lng, f.lat, f.floor*FLOOR_H + FLOOR_T + 0.6],
+  }));
+
+  const dim = fl => activeFloor === null || activeFloor === fl;
+  const hex2rgb = hex => [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
+
+  return [
+    new deck.PolygonLayer({
+      id: "floor-plates",
+      data: floorData,
+      extruded: true,
+      wireframe: true,
+      material: { ambient:0.55, diffuse:0.55, shininess:24, specularColor:[255,255,255] },
+      getPolygon: d => d.polygon,
+      getElevation: FLOOR_T,
+      // Near-opaque, muted, architectural — a material each slab is made
+      // of, not a tinted pane of glass. Real Phong shading from the
+      // lighting effect above gives each one genuine highlight/shadow
+      // depth, so color can stay restrained instead of doing all the work.
+      getFillColor: d => [...FLOOR_COLOR[d.floor], dim(d.floor) ? 248 : 28],
+      getLineColor: [255,255,255, 235],
+      lineWidthMinPixels: 1,
+      updateTriggers: { getFillColor: activeFloor },
+      transitions: { getFillColor: 200 },
+    }),
+    // Two-layer glow behind every incident dot — a wide, very soft outer
+    // falloff plus a tighter, brighter inner ring — approximating a real
+    // radial gradient, which ScatterplotLayer can't do in one instance on
+    // its own. Both scale with the real independent-report count (support:
+    // this IS the cluster-density signal). Static, not animated: an
+    // earlier version drove this off a continuous 70ms timer that rebuilt
+    // every layer on the page forever — that was the actual cause of the
+    // reported flicker, not this layer's visual design. Live "open"
+    // incidents get noticeably more presence here; everything else stays
+    // quiet, per real cluster-marker practice (the base map recedes, the
+    // thing that needs attention doesn't).
+    new deck.ScatterplotLayer({
+      id: "cluster-aura-outer",
+      data: incidentData,
+      getPosition: d => d.pos,
+      getRadius: d => 16 + d.support*3.4,
+      radiusMinPixels: d => 20 + d.support*3.6,
+      getFillColor: d => [...hex2rgb(DOMAIN_META[d.domain].hex), dim(d.zone.floor) ? (d.state==="open" ? 55 : 24) : 4],
+      stroked: false,
+      updateTriggers: { getFillColor: activeFloor },
+    }),
+    new deck.ScatterplotLayer({
+      id: "cluster-aura",
+      data: incidentData,
+      getPosition: d => d.pos,
+      getRadius: d => 9 + d.support*2.2,
+      radiusMinPixels: d => 12 + d.support*2.4,
+      getFillColor: d => [...hex2rgb(DOMAIN_META[d.domain].hex), dim(d.zone.floor) ? (d.state==="open" ? 110 : 55) : 8],
+      stroked: false,
+      updateTriggers: { getFillColor: activeFloor },
+    }),
+    // Neutral graphite, not blue: the old boundary color was the same
+    // iOS-blue as floor 0, so the site outline and the ground floor read
+    // as "the same color" for no real reason. A structural edge doesn't
+    // need to compete for a spot in the meaningful palette.
+    new deck.PathLayer({
+      id: "boundary-glow",
+      data: boundaryPath,
+      getPath: d => d,
+      getColor: [255,250,240, 100],
+      getWidth: 7,
+      widthMinPixels: 7,
+      capRounded: true, jointRounded: true,
+    }),
+    new deck.PathLayer({
+      id: "boundary-line",
+      data: boundaryPath,
+      getPath: d => d,
+      getColor: [46,38,28, 255],
+      getWidth: 1.6,
+      widthMinPixels: 1.6,
+      capRounded: true, jointRounded: true,
+    }),
+    new deck.ScatterplotLayer({
+      id: "facility-markers",
+      data: facilityData,
+      getPosition: d => d.pos,
+      getRadius: 2.2,
+      radiusMinPixels: 3,
+      getFillColor: d => [142,142,147, dim(d.floor) ? 255 : 40],
+      stroked: true,
+      getLineColor: [255,255,255,255],
+      lineWidthMinPixels: 1,
+    }),
+    new deck.PathLayer({
+      id: "zone-stems",
+      data: zoneBase,
+      getPath: d => d.stem,
+      getColor: d => [142,142,147, dim(d.floor) ? 130 : 20],
+      getWidth: 1,
+      widthMinPixels: 1,
+      updateTriggers: { getColor: activeFloor },
+    }),
+    new deck.ScatterplotLayer({
+      id: "zone-base",
+      data: zoneBase,
+      pickable: true,
+      getPosition: d => d.pos,
+      getRadius: d => d.id===FLAGSHIP_ZONE ? 4 : 3,
+      radiusMinPixels: d => d.id===FLAGSHIP_ZONE ? 6 : 4.5,
+      getFillColor: d => [255,255,255, dim(d.floor) ? 235 : 50],
+      stroked: true,
+      getLineColor: d => [142,142,147, dim(d.floor) ? 255 : 50],
+      lineWidthMinPixels: 1.4,
+    }),
+    new deck.ScatterplotLayer({
+      id: "incident-markers",
+      data: incidentData,
+      pickable: true,
+      getPosition: d => d.pos,
+      // Live "open" incidents read as urgent through static size + a ring
+      // in the one reserved urgent-red, not continuous animation — see
+      // the aura layer's comment above for why an animated pulse was
+      // dropped. Every other state keeps a plain white ring: red is spent
+      // on exactly one meaning here, never used decoratively elsewhere.
+      getRadius: d => (d.zoneId===FLAGSHIP_ZONE ? 6.5 : 5) + (d.state==="open" ? 1.5 : 0),
+      radiusMinPixels: d => (d.zoneId===FLAGSHIP_ZONE ? 9 : 7) + (d.state==="open" ? 2 : 0),
+      getFillColor: d => [...hex2rgb(DOMAIN_META[d.domain].hex), dim(d.zone.floor) ? 255 : 45],
+      stroked: true,
+      getLineColor: d => d.state==="open"
+        ? [201,65,79, dim(d.zone.floor) ? 255 : 70]
+        : [255,255,255, dim(d.zone.floor) ? 255 : 60],
+      lineWidthMinPixels: d => d.state==="open" ? 3 : 2,
+      updateTriggers: { getFillColor: activeFloor, getLineColor: activeFloor },
+      transitions: { getFillColor: 200 },
+    }),
+  ];
+}
+
+function updateLayers(){
+  if (overlay) overlay.setProps({ layers: buildLayers() });
+  updateZoneLabels();
+}
+
+/* ---------------- Replay engine ---------------- */
+let virtualTime = T_MAX;
+let INCIDENTS_NOW = [];
+let playing = false;
+let lastFrameMs = 0;
+const REPLAY_DURATION_MS = 26000; // real seconds to play the full 95-minute window
+
+// No standing render loop: layers rebuild only on a real state change
+// (scrub, play frame, floor toggle) — see setVirtualTime/renderChips below.
+// An earlier version rebuilt every layer on a 70ms timer forever, even at
+// rest, to drive a breathing glow — that constant full-scene rebuild was
+// the actual cause of the reported flicker/stutter across the whole page,
+// not any single layer.
+
+function recomputeIncidents(){
+  INCIDENTS_NOW = buildIncidentsAtTime(virtualTime);
+}
+
+function renderIncidentCard(){
+  const body = document.getElementById("incBody");
+  // Prefer the flagship zone's real water/restroom story specifically —
+  // it's the one used verbatim in this account's outreach emails and
+  // pilot brief — over whichever incident at that zone happens to sort
+  // first (a "watch"-state incident elsewhere can legitimately outrank a
+  // "verified" one in the live sort, since resolved stories sink down).
+  const top = INCIDENTS_NOW.find(i=>i.zoneId===FLAGSHIP_ZONE && i.domain==="water")
+    || INCIDENTS_NOW.find(i=>i.zoneId===FLAGSHIP_ZONE)
+    || INCIDENTS_NOW[0];
+  if (!top){
+    body.innerHTML = `<p class="inc-empty">Nincs aktív jelzés ezen az időponton.</p>`;
+    return;
+  }
+  const shown = top.signals.filter(s=>!s.duplicate);
+  const log = shown.map(s => `<li><b>${fmtClock(s.t)}</b> "${s.text}"${s.resolution ? ' <b>— megoldva</b>' : ''}</li>`).join("");
+  const mergedNote = top.mergedFromZone ? `<li>független jelzés innen: ${top.mergedFromZone} — összevonva</li>` : "";
+  const others = INCIDENTS_NOW.length - 1;
+  body.innerHTML = `
+    <span class="inc-badge ${top.state}">${STATE_LABEL[top.state]}</span>
+    <p class="inc-title">${top.title}</p>
+    <p class="inc-meta">${top.id} · ${FLOOR_LABEL[top.zone.floor]} · első jelzés ${fmtClock(top.firstSignal)}</p>
+    <ul class="inc-log">${log}${mergedNote}</ul>
+    ${others > 0 ? `<p class="inc-other">+ ${others} további aktív incidens más zónában</p>` : ""}
+  `;
+}
+
+const trackEl = document.getElementById("track");
+const trackFillEl = document.getElementById("trackFill");
+const trackThumbEl = document.getElementById("trackThumb");
+const clockNowEl = document.getElementById("clockNow");
+const livePillEl = document.getElementById("livePill");
+const playBtn = document.getElementById("playBtn");
+
+function updateReplayUI(){
+  const frac = (virtualTime - T_MIN) / (T_MAX - T_MIN);
+  trackFillEl.style.width = (frac*100).toFixed(2)+"%";
+  trackThumbEl.style.left = (frac*100).toFixed(2)+"%";
+  clockNowEl.textContent = fmtClock(virtualTime);
+  const isLive = virtualTime >= T_MAX - 0.5;
+  livePillEl.classList.toggle("replaying", !isLive);
+  livePillEl.innerHTML = isLive ? `<span class="dot"></span>ÉLŐ` : `<span class="dot"></span>VISSZAJÁTSZÁS`;
+}
+
+function setVirtualTime(vt){
+  virtualTime = Math.max(T_MIN, Math.min(T_MAX, vt));
+  recomputeIncidents();
+  updateLayers();
+  renderIncidentCard();
+  updateReplayUI();
+}
+
+function scrubFromClientX(clientX){
+  const r = trackEl.getBoundingClientRect();
+  const frac = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+  setVirtualTime(T_MIN + frac*(T_MAX-T_MIN));
+}
+trackEl.addEventListener("pointerdown", (e) => {
+  playing = false; playBtn.textContent = "▶";
+  scrubFromClientX(e.clientX);
+  const onMove = ev => scrubFromClientX(ev.clientX);
+  const onUp = () => { document.removeEventListener("pointermove", onMove); document.removeEventListener("pointerup", onUp); };
+  document.addEventListener("pointermove", onMove);
+  document.addEventListener("pointerup", onUp);
+});
+
+function playFrame(nowMs){
+  if (!playing) return;
+  const dt = lastFrameMs ? (nowMs - lastFrameMs) : 0;
+  lastFrameMs = nowMs;
+  const next = virtualTime + (dt / REPLAY_DURATION_MS) * (T_MAX - T_MIN);
+  if (next >= T_MAX){
+    setVirtualTime(T_MAX);
+    playing = false; playBtn.textContent = "▶"; lastFrameMs = 0;
+    return;
+  }
+  setVirtualTime(next);
+  requestAnimationFrame(playFrame);
+}
+playBtn.onclick = () => {
+  playing = !playing;
+  playBtn.textContent = playing ? "❚❚" : "▶";
+  if (playing){
+    if (virtualTime >= T_MAX - 0.01) virtualTime = T_MIN;
+    lastFrameMs = 0;
+    requestAnimationFrame(playFrame);
+  }
+};
+
+function initReplay(){
+  recomputeIncidents();
+  // The deck.gl overlay was first built (in map.on("load") above) before
+  // INCIDENTS_NOW had ever been computed, so its incident-markers/
+  // cluster-aura layers started out permanently empty — invisible until
+  // the user scrubbed, played, or toggled a floor, since those were the
+  // only things that called updateLayers(). A fresh, untouched page load
+  // showed no incidents or glow at all. This is likely what actually
+  // looked "broken" — every verification screenshot up to this point had
+  // already scrubbed or pressed play first, which masked it.
+  updateLayers();
+  renderIncidentCard();
+  updateReplayUI();
+}
+</script>
+</body>
+</html>
