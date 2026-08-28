@@ -3,28 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PRE//OOPS — Arena Mall (deck.gl, emeleti nézet)</title>
+<title>PRE//OOPS — Arena Mall</title>
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.29.0/mapbox-gl.js"></script>
 <link href="https://api.mapbox.com/mapbox-gl-js/v3.29.0/mapbox-gl.css" rel="stylesheet">
 <script src="https://unpkg.com/deck.gl@9.1.14/dist.min.js"></script>
 <style>
   :root{
-    /* "Architectural digital-twin" concept, v2: the first pass borrowed
-       iOS's stock system colors wholesale — functional, but generic, and
-       it put a full rainbow on screen at all times with nothing held in
-       reserve for genuine urgency. Rebuilt around research into current
-       (2026) dashboard practice — restrained, elevated-neutral palettes
-       with color spent deliberately, not decoratively — and around this
-       project's OWN pre-existing "thermal priority" ramp (calm blue → hot
-       red, already used for the incident severity legend elsewhere in
-       this demo set), extended here to also carry floor identity: cooler
-       near the ground, warmer higher up, so the palette tells a spatial
-       story instead of an arbitrary one. True saturated red is spent on
-       exactly one thing now — a live, unresolved incident — never on
-       decoration, matching what an operator actually needs to scan for.
-       Warm stone backdrop replaces the previous cool iOS blue-white,
-       per the same research (elevated neutrals: soft grey/stone/oatmeal
-       over stark white). */
     --bg:#f2ede4;
     --glass:rgba(255,253,249,0.68); --glass-strong:rgba(255,253,249,0.85);
     --glass-border:rgba(255,255,255,0.6); --hairline:rgba(52,42,30,0.12);
@@ -52,10 +36,10 @@
   .titles{display:flex;flex-direction:column;line-height:1.25;margin-right:auto}
   .titles .t{font-weight:700;font-size:14.5px;color:var(--ink)}
   .titles .s{font-size:11.5px;color:var(--ink-dim)}
-  .engine-badge{
-    font-size:10.5px;letter-spacing:.03em;text-transform:uppercase;color:#1c5064;
-    background:rgba(44,110,142,0.12);border:1px solid rgba(44,110,142,0.28);
-    border-radius:20px;padding:4px 10px;font-weight:600;
+  .env-tag{
+    font-size:10px;letter-spacing:.03em;text-transform:uppercase;color:var(--ink-faint);
+    background:rgba(120,110,95,0.1);border:1px solid var(--hairline);
+    border-radius:20px;padding:3px 9px;font-weight:600;
   }
   .floor-toggle{display:flex;gap:6px}
   .fchip{
@@ -67,20 +51,24 @@
   .fchip .sw{width:9px;height:9px;border-radius:3px;display:inline-block}
   .fchip.active{color:#fff;border-color:transparent;background:var(--accent);box-shadow:0 2px 8px rgba(44,110,142,0.35)}
 
-  main{flex:1;position:relative;display:flex;overflow:hidden}
+  main{flex:1;display:flex;overflow:hidden;min-height:0}
+  .map-area{flex:1;position:relative;min-width:0}
   #map{position:absolute;inset:0}
 
   .notice{
     position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:4;
     font-size:11px;letter-spacing:.02em;color:#8a5a00;padding:6px 14px;border-radius:20px;
     background:rgba(255,204,0,0.22);border:1px solid rgba(255,180,0,0.4);
-    backdrop-filter:blur(10px);font-weight:600;
+    backdrop-filter:blur(10px);font-weight:600;text-align:center;
   }
 
-  aside{
+  .side-panel{
     width:308px;min-width:308px;padding:16px;overflow-y:auto;z-index:3;
-    display:flex;flex-direction:column;gap:14px;border-radius:18px 0 0 18px;border-right:none;
+    display:flex;flex-direction:column;gap:14px;
   }
+  .side-panel.left{width:270px;min-width:270px;border-radius:0 18px 18px 0;border-left:none}
+  .side-panel.right{border-radius:18px 0 0 18px;border-right:none}
+
   .card{background:var(--glass-strong);border:1px solid var(--hairline);border-radius:16px;
     padding:14px 15px;box-shadow:0 1px 3px rgba(30,30,40,0.05)}
   .card h3{margin:0 0 10px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);font-weight:700}
@@ -88,6 +76,34 @@
   .legend-row .sw{width:13px;height:13px;border-radius:4px;flex:none}
   .legend-row .lbl{flex:1;color:var(--ink)}
   .legend-row .cnt{color:var(--ink-faint);font-variant-numeric:tabular-nums;font-size:11.5px}
+
+  /* ---- QR guest-side mockup ---- */
+  .phone-mock{
+    background:#fff;border:1px solid var(--hairline);border-radius:20px;padding:14px;
+    box-shadow:0 4px 16px rgba(40,30,20,0.10);
+  }
+  .ph-loc{font-size:10.5px;color:var(--ink-faint);margin-bottom:8px}
+  .ph-prompt{font-size:13px;font-weight:700;margin-bottom:10px}
+  .ph-input{
+    background:var(--bg);border:1px solid var(--hairline);border-radius:10px;padding:10px 11px;
+    font-size:12px;color:var(--ink);min-height:44px;margin-bottom:10px;line-height:1.4;
+  }
+  .ph-btn{
+    width:100%;background:var(--accent);color:#fff;border:none;border-radius:10px;
+    padding:9px;font-size:12.5px;font-weight:700;cursor:default;
+  }
+  .qr-note{font-size:11px;color:var(--ink-dim);line-height:1.5;margin:10px 0 0}
+  .compare{display:flex;flex-direction:column;gap:6px;font-size:11.5px;margin-top:4px}
+  .compare .row{display:flex;gap:8px;align-items:flex-start}
+  .compare .tag{flex:none;font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;
+    padding:2px 6px;border-radius:4px;margin-top:1px}
+  .compare .tag.now{background:rgba(120,110,95,0.14);color:var(--ink-dim)}
+  .compare .tag.pre{background:rgba(44,110,142,0.14);color:var(--accent)}
+  .compare .txt{color:var(--ink-dim)}
+
+  .benefit-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:9px}
+  .benefit-list li{font-size:11.5px;color:var(--ink-dim);line-height:1.5}
+  .benefit-list li b{color:var(--ink);display:block;font-size:12px;margin-bottom:1px}
 
   .inc-badge{
     display:inline-block;font-size:10px;letter-spacing:.04em;text-transform:uppercase;
@@ -99,18 +115,30 @@
   .inc-badge.verified{background:rgba(52,199,89,0.16);color:#1a8a3d}
   .inc-title{font-size:14px;font-weight:700;margin:0 0 3px;color:var(--ink)}
   .inc-meta{font-size:11px;color:var(--ink-faint);margin-bottom:10px}
-  .inc-log{font-size:12px;color:var(--ink-dim);display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
-  .inc-log li{padding-left:12px;position:relative}
-  .inc-log li::before{content:"";position:absolute;left:0;top:6px;width:5px;height:5px;border-radius:50%;background:var(--ink-faint)}
-  .inc-log li b{color:var(--ink)}
   .inc-empty{font-size:12px;color:var(--ink-faint);padding:4px 0}
-  .inc-other{font-size:11px;color:var(--ink-faint);margin-top:8px;padding-top:8px;border-top:1px solid var(--hairline)}
+  .inc-sub{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;margin:12px 0 6px}
+  .inc-sub:first-of-type{margin-top:2px}
+  .why-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+  .why-list li{font-size:11.5px;color:var(--ink-dim);padding-left:11px;position:relative}
+  .why-list li::before{content:"";position:absolute;left:0;top:6px;width:4px;height:4px;background:var(--ink-faint);border-radius:50%}
+  .kv-row{display:flex;justify-content:space-between;font-size:11.5px;padding:2px 0}
+  .kv-row .k{color:var(--ink-faint)}
+  .kv-row .v{color:var(--ink);font-weight:600}
+  .timeline{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+  .timeline li{font-size:11.5px;color:var(--ink-dim);display:flex;gap:8px}
+  .timeline li b{color:var(--ink);font-variant-numeric:tabular-nums;flex:none;width:36px}
+  .pattern-flag{
+    margin-top:10px;padding:9px 10px;border-radius:10px;background:rgba(220,150,20,0.12);
+    border:1px solid rgba(220,150,20,0.3);font-size:11.5px;color:#7a5200;line-height:1.5;
+  }
+  .measure-note{font-size:10.5px;color:var(--ink-faint);margin-top:10px;padding-top:9px;border-top:1px solid var(--hairline);line-height:1.5}
+  .inc-other{font-size:11px;color:var(--ink-faint);margin-top:8px}
 
   .domain-row{display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 0;color:var(--ink)}
   .domain-row .sw{width:10px;height:10px;border-radius:50%;flex:none}
 
   footer{
-    padding:9px 16px;font-size:10.5px;color:var(--ink-faint);z-index:5;
+    padding:8px 16px;font-size:10px;color:var(--ink-faint);z-index:5;
     display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-radius:18px 18px 0 0;border-bottom:none;
   }
 
@@ -122,14 +150,6 @@
   .dl-tt .zn{font-weight:700;margin-bottom:2px}
   .dl-tt .fl{color:var(--ink-dim);font-size:11px}
 
-  /* Solid background, no backdrop-filter: this element is a Mapbox marker
-     — Mapbox applies its own `transform: translate3d(...)` directly on it
-     for positioning, and combined with backdrop-filter that produced a
-     div that reported fully visible (opacity 1, in the DOM, on top of the
-     stack) yet painted nothing at all, confirmed by a pixel-level
-     screenshot crop. Same "correct per every API check, invisible on
-     screen" signature as the earlier deck.gl TextLayer bug this session —
-     dropping the one advanced-compositing property fixes it. */
   .zone-label{
     font-size:11px;color:var(--ink);background:#ffffff;border:1px solid var(--hairline);
     border-radius:20px;padding:3px 9px;white-space:nowrap;pointer-events:none;
@@ -139,15 +159,16 @@
   /* ---- Replay bar ---- */
   .replay-bar{
     position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:4;
-    display:flex;align-items:center;gap:12px;padding:9px 16px 9px 9px;border-radius:26px;
-    width:min(620px, calc(100% - 40px));
+    display:flex;align-items:center;gap:12px;padding:9px 18px 9px 9px;border-radius:26px;
+    width:min(640px, calc(100% - 40px));
   }
   .play-btn{
-    width:34px;height:34px;border-radius:50%;border:none;background:var(--accent);color:#fff;
-    display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;
-    box-shadow:0 2px 8px rgba(44,110,142,0.4);font-size:13px;transition:transform .1s;
+    height:34px;border-radius:20px;border:none;background:var(--accent);color:#fff;
+    display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;flex:none;
+    box-shadow:0 2px 8px rgba(44,110,142,0.4);font-size:12.5px;font-weight:700;transition:transform .1s;
+    padding:0 14px;white-space:nowrap;
   }
-  .play-btn:active{transform:scale(0.92)}
+  .play-btn:active{transform:scale(0.96)}
   .clock{font-variant-numeric:tabular-nums;font-size:12.5px;color:var(--ink-dim);flex:none;width:38px;font-weight:600}
   .track{flex:1;height:20px;display:flex;align-items:center;cursor:pointer;position:relative}
   .track::before{content:"";position:absolute;left:0;right:0;height:5px;border-radius:3px;background:rgba(120,110,95,0.18)}
@@ -157,12 +178,21 @@
     box-shadow:0 1px 4px rgba(30,30,40,0.3),0 0 0 1px rgba(0,0,0,0.06);pointer-events:none;
     transform:translateX(-50%);
   }
-  .live-pill{
+  .sim-pill{
     font-size:10px;letter-spacing:.04em;font-weight:700;padding:3px 9px;border-radius:20px;flex:none;
-    background:rgba(255,59,48,0.12);color:#d70015;transition:all .2s;
+    background:rgba(120,110,95,0.14);color:var(--ink-faint);
   }
-  .live-pill.replaying{background:rgba(120,120,128,0.14);color:var(--ink-faint)}
-  .live-pill .dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:currentColor;margin-right:4px}
+
+  @media (max-width: 900px){
+    header{border-radius:0}
+    .titles .s{display:none}
+    main{flex-direction:column;overflow-y:auto;overflow-x:hidden}
+    .side-panel{width:100%;min-width:0;border-radius:0;overflow-y:visible}
+    .side-panel.left{order:2;border-left:none}
+    .side-panel.right{order:1;border-right:none}
+    .map-area{order:3;flex:none;height:340px}
+    footer{border-radius:0}
+  }
 </style>
 </head>
 <body>
@@ -172,29 +202,52 @@
       <span class="word">PRE<b>//</b>OOPS</span>
     </div>
     <div class="titles">
-      <span class="t">Arena Mall — emeleti nézet</span>
-      <span class="s">2027. jan. · szombati csúcsforgalom · valódi épületkontúr, valódi szintadatok</span>
+      <span class="t">Arena Mall — szabad szavas vendégjelzésekből korai operációs riasztás</span>
+      <span class="s">Szimulált mosdózónás replay · 3 nyelv · 26 másodperc</span>
     </div>
-    <span class="engine-badge">render motor: deck.gl</span>
+    <span class="env-tag">Illusztratív adatok · nem Arena-esemény</span>
     <div class="floor-toggle" id="floorToggle"></div>
   </header>
 
   <main>
-    <div id="map"></div>
-    <div class="notice">⚠ SZABÁLYOZOTT VISSZAJÁTSZÁS — ILLUSZTRATÍV JELZÉSEK, VALÓDI ÉPÜLET- ÉS SZINTADATOK</div>
-
-    <div class="replay-bar glass">
-      <button class="play-btn" id="playBtn">▶</button>
-      <span class="clock" id="clockStart">10:00</span>
-      <div class="track" id="track">
-        <div class="track-fill" id="trackFill"></div>
-        <div class="track-thumb" id="trackThumb"></div>
+    <aside class="side-panel left glass">
+      <div class="card">
+        <h3>Vendégoldal (QR)</h3>
+        <div class="phone-mock">
+          <div class="ph-loc">📍 Központi átrium, földszinti mosdó</div>
+          <div class="ph-prompt">Jelezz problémát ezen a helyen</div>
+          <div class="ph-input">„Nincs papír, és két fülke zárva van.”</div>
+          <button class="ph-btn">Jelzés elküldése</button>
+        </div>
+        <p class="qr-note">A QR-oldal a pilot legkönnyebb belépési pontja, nem egy új kötelező alkalmazás. Később a SPOT, az infópult és a stáb jelzései mellett egy közös intelligenciaréteg lehet.</p>
       </div>
-      <span class="clock" id="clockNow">11:35</span>
-      <span class="live-pill" id="livePill"><span class="dot"></span>ÉLŐ</span>
+
+      <div class="card">
+        <h3>Ma vs. PRE//OOPS-szal</h3>
+        <div class="compare">
+          <div class="row"><span class="tag now">Ma</span><span class="txt">Különálló panaszok, manuális összekapcsolás</span></div>
+          <div class="row"><span class="tag pre">PRE//OOPS</span><span class="txt">Egy helyhez kötött ügy, mérhető reakcióút</span></div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="map-area">
+      <div id="map"></div>
+      <div class="notice">⚠ SZABÁLYOZOTT VISSZAJÁTSZÁS — ILLUSZTRATÍV JELZÉSEK · VALÓS ARENA ÉPÜLETKONTÚR, ILLUSZTRATÍV ZÓNÁK ÉS ESEMÉNYEK</div>
+
+      <div class="replay-bar glass">
+        <button class="play-btn" id="playBtn">▶ Replay indítása</button>
+        <span class="clock" id="clockStart">10:00</span>
+        <div class="track" id="track">
+          <div class="track-fill" id="trackFill"></div>
+          <div class="track-thumb" id="trackThumb"></div>
+        </div>
+        <span class="clock" id="clockNow">10:00</span>
+        <span class="sim-pill">SZIMULÁCIÓ</span>
+      </div>
     </div>
 
-    <aside class="glass">
+    <aside class="side-panel right glass">
       <div class="card">
         <h3>Szintek</h3>
         <div id="legendList"></div>
@@ -211,19 +264,20 @@
       </div>
 
       <div class="card">
-        <h3>Miért deck.gl</h3>
-        <p style="font-size:11.5px;color:var(--ink-dim);line-height:1.5;margin:0">
-          A korábbi Mapbox Standard-style próbálkozásban a saját emelet-rétegek
-          nem íródtak ki a stílus belső "import" rétege fölé. A deck.gl saját
-          WebGL overlay-je nem ettől függ — ugyanaz a valódi épületkontúr,
-          valódi OSM szintadatok, most ténylegesen látható rétegenként.
-        </p>
+        <h3>Mit nyerhet ezzel az Arena?</h3>
+        <ul class="benefit-list">
+          <li><b>Korábbi felismerés</b>A probléma már néhány jelzésnél láthatóvá válik, nem csak sok panasz után.</li>
+          <li><b>Kevesebb párhuzamos ügy</b>Az ugyanahhoz az incidenshez tartozó bejelentések nem külön ticketként terhelik a csapatot.</li>
+          <li><b>Pontosabb feladatkiadás</b>A szolgáltató egy helyhez, tünethez és bizonyítékcsomaghoz kötött ügyet kap.</li>
+          <li><b>Mérhető szolgáltatói teljesítés</b>Láthatóvá válik a felismerési, kiosztási és helyreállítási idő.</li>
+          <li><b>Visszatérő problémák</b>Azonosíthatók a rendszeresen problémás zónák és időszakok.</li>
+        </ul>
       </div>
     </aside>
   </main>
 
   <footer class="glass">
-    <span>Forrás: OpenStreetMap (way 25268421, ODbL 1.0) — valódi épületkontúr és emeletjelölések (level=)</span>
+    <span>Forrás: OpenStreetMap közösségi adatok, ODbL 1.0 — valós Arena épületkontúr</span>
     <span>PRE//OOPS demo · nem éles rendszer</span>
   </footer>
 </div>
@@ -233,75 +287,72 @@ mapboxgl.accessToken = "pk.eyJ1IjoiYXR0aWxhYm9yY3MiLCJhIjoiY21hdjR4aDNpMDBzbDJuc
 
 const SITE_BOUNDARY = [[19.0894142,47.4989447],[19.0896479,47.4989443],[19.0896476,47.4988581],[19.0897986,47.4988578],[19.0906812,47.4988564],[19.0906815,47.4989426],[19.0907057,47.4989426],[19.0910399,47.498942],[19.0910909,47.498942],[19.0914359,47.4989414],[19.0914356,47.4988571],[19.0926002,47.4988553],[19.0926005,47.4989395],[19.0926779,47.4989394],[19.0927778,47.4989392],[19.0928491,47.4989391],[19.0929091,47.498939],[19.0929087,47.4988469],[19.0943142,47.4988446],[19.0943137,47.4986963],[19.0943117,47.4981509],[19.0943107,47.49787],[19.0943106,47.4978429],[19.0893975,47.4978509],[19.0893985,47.4981093],[19.089366,47.4981094],[19.089367,47.4983717],[19.0894121,47.4983716],[19.089413,47.4986191],[19.0894142,47.4989447]];
 
+// Zones use generic functional names, not tenant brand names — a wrong
+// store name reads worse to a real center manager than no name at all.
 const ZONES = [
-  { id:"west-wing",      name:"Nyugati szárny – Peek & Cloppenburg", lng:19.0900403, lat:47.4980187, floor:0 },
-  { id:"cinema",         name:"Cinema City Arena",                   lng:19.0903664, lat:47.4984388, floor:2 },
-  { id:"central-atrium", name:"Központi átrium – Massimo Dutti",     lng:19.0918909, lat:47.498184,  floor:0 },
-  { id:"north-corridor", name:"Északi sor – Douglas",                lng:19.0921834, lat:47.4984572, floor:0 },
-  { id:"east-food",      name:"Keleti étkezőudvar – Tesco",          lng:19.0935207, lat:47.4985715, floor:0 },
-  { id:"east-wing",      name:"Keleti szárny – Primark",             lng:19.0940478, lat:47.4986603, floor:1 },
-  { id:"fashion-l1",     name:"Divatsor (1. emelet) – Zara",         lng:19.0926957, lat:47.4984971, floor:1 },
+  { id:"west-wing",      name:"Nyugati bejárat",     lng:19.0900403, lat:47.4980187, floor:0 },
+  { id:"cinema",         name:"Cinema City előtér",  lng:19.0903664, lat:47.4984388, floor:2 },
+  { id:"central-atrium", name:"Központi átrium",     lng:19.0918909, lat:47.498184,  floor:0 },
+  { id:"east-food",      name:"Food court",          lng:19.0935207, lat:47.4985715, floor:0 },
+  { id:"east-wing",      name:"Keleti szárny",       lng:19.0940478, lat:47.4986603, floor:1 },
+  { id:"fashion-l1",     name:"Emeleti divatsor",    lng:19.0926957, lat:47.4984971, floor:1 },
 ];
 const FLAGSHIP_ZONE = "central-atrium";
 
 const FACILITIES = [
-  { name:"Mosdó – Központi átrium mellett", subtype:"toilet",   lng:19.091750, lat:47.498250, floor:0 },
-  { name:"Mosdó – Cinema City mellett",     subtype:"toilet",   lng:19.090550, lat:47.498500, floor:0 },
-  { name:"Főbejárat – Kerepesi út",         subtype:"entrance", lng:19.089950, lat:47.498100, floor:0 },
-  { name:"P2 mozgássérült parkoló",         subtype:"parking",  lng:19.093200, lat:47.497950, floor:0 },
-  { name:"Információs pult",                subtype:"info",     lng:19.091900, lat:47.498350, floor:0 },
+  { name:"Mosdó – Központi átrium",   subtype:"toilet",   lng:19.091750, lat:47.498250, floor:0 },
+  { name:"Mosdó – Cinema City",       subtype:"toilet",   lng:19.090550, lat:47.498500, floor:0 },
+  { name:"Főbejárat – Kerepesi út",   subtype:"entrance", lng:19.089950, lat:47.498100, floor:0 },
+  { name:"P2 mozgássérült parkoló",   subtype:"parking",  lng:19.093200, lat:47.497950, floor:0 },
+  { name:"Információs pult",          subtype:"info",     lng:19.091900, lat:47.498350, floor:0 },
 ];
 
-// Real complaint corpus, ported verbatim from customers/arena-mall.mjs —
-// same engine semantics as every other customer demo in this project
-// (computeLifecycle/buildIncidentsAtTime below are ported from
-// template.html unchanged), now actually driving a live replay instead of
-// a single static snapshot.
 const CLOCK_START = 10 * 60;
+// Every signal here is illustrative, not a real Arena guest report. Scoped
+// to concerns the mall operator (or its contracted service providers)
+// directly owns — common-area restrooms, cleaning/waste, leaks, escalators,
+// common-area crowding — not tenant-internal issues like a shop's own POS
+// terminal or fitting-room queue, which read as someone else's problem to
+// a center manager.
 const RAW_SIGNALS = [
-  { t:0,  zone:"central-atrium", lang:"hu", domain:"water", text:"Nincs papír a földszinti mosdóban." },
-  { t:2,  zone:"central-atrium", lang:"en", domain:"water", text:"No paper towels in the ground floor restroom." },
-  { t:5,  zone:"central-atrium", lang:"hu", domain:"water", text:"Ugyanaz, még mindig nincs kéztörlő.", duplicate:true },
-  { t:9,  zone:"central-atrium", lang:"en", domain:"water", text:"One stall now locked, out of order sign on it." },
-  { t:14, zone:"central-atrium", lang:"hu", domain:"water", text:"Megint lezárták az egyik fülkét." },
-  { t:21, zone:"central-atrium", lang:"de", domain:"water", text:"Eine Kabine ist wieder gesperrt, kein Papier." },
-  { t:33, zone:"central-atrium", lang:"en", domain:"water", text:"Cleaning staff on site, restocking now." },
-  { t:38, zone:"central-atrium", lang:"hu", domain:"water", text:"Fülke újra nyitva, van papír.", resolution:true },
-  { t:39, zone:"central-atrium", lang:"en", domain:"water", text:"Restroom fully stocked and stall reopened.", resolution:true },
+  { t:0,  zone:"central-atrium", lang:"hu", domain:"restroom", text:"Nincs papír a földszinti mosdóban." },
+  { t:2,  zone:"central-atrium", lang:"en", domain:"restroom", text:"No paper towels in the ground floor restroom." },
+  { t:5,  zone:"central-atrium", lang:"hu", domain:"restroom", text:"Ugyanaz, még mindig nincs kéztörlő.", duplicate:true },
+  { t:9,  zone:"central-atrium", lang:"en", domain:"restroom", text:"One stall now locked, out of order sign on it." },
+  { t:14, zone:"central-atrium", lang:"hu", domain:"restroom", text:"Megint lezárták az egyik fülkét." },
+  { t:21, zone:"central-atrium", lang:"de", domain:"restroom", text:"Eine Kabine ist wieder gesperrt, kein Papier." },
+  { t:33, zone:"central-atrium", lang:"en", domain:"restroom", text:"Cleaning staff on site, restocking now." },
+  { t:38, zone:"central-atrium", lang:"hu", domain:"restroom", text:"Fülke újra nyitva, van papír.", resolution:true },
+  { t:39, zone:"central-atrium", lang:"en", domain:"restroom", text:"Restroom fully stocked and stall reopened.", resolution:true },
 
-  { t:6,  zone:"cinema", lang:"en", domain:"water", text:"Restroom by the cinema is out of paper too." },
-  { t:11, zone:"cinema", lang:"hu", domain:"water", text:"A mozi melletti mosdóban sincs kéztörlő." },
-  { t:19, zone:"cinema", lang:"en", domain:"water", text:"Same issue here, nobody's restocked it yet." },
+  { t:6,  zone:"cinema", lang:"en", domain:"restroom", text:"Restroom by the cinema is out of paper too." },
+  { t:11, zone:"cinema", lang:"hu", domain:"restroom", text:"A mozi melletti mosdóban sincs kéztörlő." },
+  { t:19, zone:"cinema", lang:"en", domain:"restroom", text:"Same issue here, nobody's restocked it yet." },
 
-  { t:28, zone:"cinema", lang:"hu", domain:"crowd", text:"Nagy a sor a mozi jegypénztárnál." },
-  { t:31, zone:"cinema", lang:"en", domain:"crowd", text:"Long queue building at the cinema box office." },
-  { t:40, zone:"cinema", lang:"en", domain:"crowd", text:"Only one till open, queue backing into the corridor." },
-  { t:52, zone:"cinema", lang:"de", domain:"crowd", text:"Schlange vor dem Kino reicht bis in den Gang." },
-  { t:70, zone:"cinema", lang:"en", domain:"crowd", text:"Second till opened, queue still long before the matinee." },
-
-  { t:15, zone:"north-corridor", lang:"hu", domain:"payment", text:"Nem megy a kártyás fizetés a Douglas-nál." },
-  { t:17, zone:"north-corridor", lang:"en", domain:"payment", text:"Card terminal down at the perfumery." },
-  { t:24, zone:"north-corridor", lang:"en", domain:"payment", text:"Still cash only, small queue forming at the till." },
-  { t:41, zone:"north-corridor", lang:"hu", domain:"payment", text:"Terminál kicserélve, újra megy a kártya.", resolution:true },
+  { t:28, zone:"cinema", lang:"hu", domain:"crowd", text:"Nagy sor alakult ki a mozi előtti folyosón." },
+  { t:31, zone:"cinema", lang:"en", domain:"crowd", text:"Long queue building in the corridor outside the cinema." },
+  { t:40, zone:"cinema", lang:"en", domain:"crowd", text:"Queue now blocking the walkway near the entrance." },
+  { t:52, zone:"cinema", lang:"de", domain:"crowd", text:"Schlange blockiert den Gang vor dem Kino." },
+  { t:70, zone:"cinema", lang:"en", domain:"crowd", text:"Queue has cleared, walkway open again." },
 
   { t:20, zone:"east-food", lang:"hu", domain:"waste", text:"Tele van a szemetes az étkezőudvarnál." },
   { t:23, zone:"east-food", lang:"en", domain:"waste", text:"Bin overflowing near the food court tables." },
   { t:44, zone:"east-food", lang:"en", domain:"waste", text:"Cleaned and emptied now.", resolution:true },
 
-  { t:12, zone:"west-wing", lang:"hu", domain:"water", text:"Csöpög a csap a nyugati szárny mosdójában." },
-  { t:16, zone:"west-wing", lang:"en", domain:"water", text:"Tap dripping in the west wing restroom." },
+  { t:12, zone:"west-wing", lang:"hu", domain:"leak", text:"Csöpög a csap a nyugati bejárat melletti mosdóban." },
+  { t:16, zone:"west-wing", lang:"en", domain:"leak", text:"Tap dripping in the restroom by the west entrance." },
 
   { t:0,  zone:"west-wing", lang:"hu", domain:"crowd", text:"Hosszú sor a nyugati bejáratnál nyitáskor." },
   { t:3,  zone:"west-wing", lang:"en", domain:"crowd", text:"Long line at the west entrance right at opening." },
   { t:18, zone:"west-wing", lang:"en", domain:"crowd", text:"Queue clearing, most people already inside now." },
   { t:25, zone:"west-wing", lang:"hu", domain:"crowd", text:"Bejáratnál minden rendben.", resolution:true },
 
-  { t:45, zone:"east-wing", lang:"en", domain:"payment", text:"Self-checkout card reader not working at Primark." },
-  { t:49, zone:"east-wing", lang:"hu", domain:"payment", text:"Az önkiszolgáló kasszánál sem megy a kártya." },
+  { t:45, zone:"east-wing", lang:"en", domain:"escalator", text:"One of the escalators has stopped in the east wing." },
+  { t:49, zone:"east-wing", lang:"hu", domain:"escalator", text:"A keleti szárnyi mozgólépcső még mindig áll." },
 
-  { t:78, zone:"east-food", lang:"hu", domain:"water", text:"Beázás a mennyezetnél az étkezőudvar fölött." },
-  { t:82, zone:"east-food", lang:"en", domain:"water", text:"Ceiling leak above the food court seating." },
-  { t:87, zone:"east-food", lang:"en", domain:"water", text:"Confirmed, bucket placed, maintenance called." },
+  { t:78, zone:"east-food", lang:"hu", domain:"leak", text:"Beázás a mennyezetnél az étkezőudvar fölött." },
+  { t:82, zone:"east-food", lang:"en", domain:"leak", text:"Ceiling leak above the food court seating." },
+  { t:87, zone:"east-food", lang:"en", domain:"leak", text:"Confirmed, bucket placed, maintenance called." },
 
   { t:60, zone:"east-food", lang:"hu", domain:"crowd", text:"Hosszú sor az étkezőudvar népszerűbb pultjainál." },
   { t:64, zone:"east-food", lang:"en", domain:"crowd", text:"Long lines at the busier food court counters." },
@@ -311,36 +362,34 @@ const RAW_SIGNALS = [
   { t:59, zone:"central-atrium", lang:"en", domain:"waste", text:"Bin overflowing in the central atrium." },
   { t:74, zone:"central-atrium", lang:"en", domain:"waste", text:"Emptied and cleaned.", resolution:true },
 
-  { t:48, zone:"fashion-l1", lang:"hu", domain:"crowd", text:"Hosszú sor a próbafülkéknél." },
-  { t:53, zone:"fashion-l1", lang:"en", domain:"crowd", text:"Long wait for the fitting rooms upstairs." },
+  { t:48, zone:"fashion-l1", lang:"hu", domain:"crowd", text:"Torlódás alakult ki az emeleti folyosón, nehéz elférni." },
+  { t:53, zone:"fashion-l1", lang:"en", domain:"crowd", text:"Upper floor walkway still congested near the escalator." },
 ];
-const MERGE_RULES = [{ a:"central-atrium::water", b:"cinema::water", at:26 }];
+// Two independent restroom-supply reports, same real cleaning-crew
+// coverage gap, at two different zones — kept as two separate incidents
+// (see buildIncidentsAtTime below), cross-flagged as a possible shared
+// pattern rather than silently fused into one.
+const PATTERN_RULES = [{ a:"central-atrium::restroom", b:"cinema::restroom", at:26 }];
 
-const FLOOR_H = 4.6;      // real-scale retail floor-to-floor height, meters
-const FLOOR_T = 2.2;      // slab thickness, meters
-const FLOOR_LABEL = ["Földszint", "1. emelet", "2. emelet (Cinema City)"];
-// Three points sampled from this project's own "thermal priority" ramp
-// (the same calm-blue → hot-red scale used for incident severity in every
-// other customer demo this session), used here to carry floor identity
-// instead: cooler at ground level, warmer higher up — the palette reads
-// as a real vertical gradient through the building, not three arbitrary
-// picks. Stops deliberately short of the ramp's hottest red — that's kept
-// in reserve, spent only on a genuinely live incident (see --urgent /
-// incident-markers below), never on a floor that's simply doing fine.
+const FLOOR_LABEL = ["Földszint", "1. emelet", "2. emelet"];
 const FLOOR_COLOR = [[92,133,158], [196,168,96], [199,138,86]];
 const FLOOR_HEX   = ["#5c859e", "#c4a860", "#c78a56"];
 
-// Domain colors stay visually distinct from the muted, architectural
-// floor palette by register, not just hue: floors are structure (muted,
-// desaturated), domains are signal (fully saturated jewel tones) — so an
-// incident dot always reads as "data" against the calmer building it
-// sits on, per the layering principle from real cluster-marker patterns
-// (magnitude/urgency should pop, the base map should recede).
 const DOMAIN_META = {
-  water:   { label:"Víz / Higiénia",       hex:"#1f8fe0" },
-  crowd:   { label:"Tömeg / Sorban állás", hex:"#9b3fe8" },
-  waste:   { label:"Hulladék",             hex:"#14b866" },
-  payment: { label:"Fizetés / Kártya",     hex:"#f2a30f" },
+  restroom:  { label:"Mosdóellátás",         hex:"#1f8fe0" },
+  leak:      { label:"Szivárgás / vízvezeték", hex:"#0e9f8e" },
+  crowd:     { label:"Torlódás",              hex:"#9b3fe8" },
+  waste:     { label:"Hulladék",              hex:"#14b866" },
+  escalator: { label:"Mozgólépcső",           hex:"#f2a30f" },
+};
+const OWNER_BY_DOMAIN = {
+  restroom:"Takarítási szolgáltató", waste:"Takarítási szolgáltató",
+  leak:"Műszaki szolgáltató", escalator:"Műszaki szolgáltató",
+  crowd:"Üzemeltetés / biztonsági szolgálat",
+};
+const ACTION_BY_STATE = {
+  watch:"Megfigyelés, még nincs teendő", open:"Helyszíni ellenőrzés javasolt",
+  resolved_pending:"Visszaigazolva, zárás ellenőrzés alatt", verified:"Ellenőrizve és lezárva",
 };
 
 const STATE_LABEL = { watch:"Megfigyelés", open:"Nyitott", resolved_pending:"Megoldva (függőben)", verified:"Ellenőrizve" };
@@ -354,46 +403,41 @@ function fmtClock(vt){
   return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
 }
 
-// ---- Incident engine, ported from template.html (same real semantics
-// every other customer demo in this project uses) ----
 function computeLifecycle(sigsAll, vt){
   const independent = sigsAll.filter(s=>!s.duplicate);
   const n = independent.length;
-  let state = "watch", resolvedAt=null;
-  if (n>=4) state = "open";
+  let state = "watch", resolvedAt=null, clusterAt=null, verifiedAt=null;
+  if (n>=4){ state = "open"; clusterAt = independent[3].t; }
   const resSignals = sigsAll.filter(s=>s.resolution);
   if (state==="open" && resSignals.length){
     state = "resolved_pending";
     resolvedAt = resSignals[0].t;
     const lastResTime = resSignals[resSignals.length-1].t;
-    if (vt - lastResTime >= 8) state = "verified";
+    if (vt - lastResTime >= 8){ state = "verified"; verifiedAt = lastResTime + 8; }
   }
   const sev = n>=7 ? "critical" : n>=4 ? "high" : n>=2 ? "medium" : "low";
-  return { state, sev, support:n, firstSignal:sigsAll[0].t, lastSignal:sigsAll[sigsAll.length-1].t, resolvedAt };
+  return { state, sev, support:n, firstSignal:sigsAll[0].t, lastSignal:sigsAll[sigsAll.length-1].t, clusterAt, resolvedAt, verifiedAt };
 }
 function incidentTitle(domain, zoneName){
   const m = {
-    water: `Vízkimaradás — ${zoneName}`,
+    restroom: `Mosdóellátási probléma — ${zoneName}`,
+    leak: `Szivárgás / vízvezeték-hiba — ${zoneName}`,
+    crowd: `Torlódás — ${zoneName}`,
     waste: `Hulladék túlcsordulás — ${zoneName}`,
-    crowd: `Tömegtorlódás — ${zoneName}`,
-    payment: `Fizetési hiba — ${zoneName}`,
+    escalator: `Mozgólépcső-leállás — ${zoneName}`,
   };
   return m[domain] || `Incidens — ${zoneName}`;
 }
+// Each zone::domain group stays its own incident — no cross-zone merging.
+// A PATTERN_RULES match only adds a "possible shared pattern" flag on both
+// sides, surfaced as a callout in the incident card, not a silent fusion
+// of two different physical locations into one number.
 function buildIncidentsAtTime(vt){
   const groups = {};
   for (const s of RAW_SIGNALS){
     if (s.t > vt) continue;
     const key = s.zone + "::" + s.domain;
     (groups[key] ||= []).push(s);
-  }
-  const mergedAway = {};
-  for (const rule of MERGE_RULES){
-    if (vt >= rule.at && groups[rule.a] && groups[rule.b]){
-      groups[rule.a] = groups[rule.a].concat(groups[rule.b]);
-      mergedAway[rule.a] = rule.b;
-      delete groups[rule.b];
-    }
   }
   const incidents = [];
   for (const key in groups){
@@ -402,8 +446,12 @@ function buildIncidentsAtTime(vt){
     const zone = ZONES.find(z=>z.id===zoneId);
     const info = computeLifecycle(sigsAll, vt);
     if (info.support < 2) continue;
-    const mergedFromZone = mergedAway[key] ? ZONES.find(z=>z.id===mergedAway[key].split("::")[0]).name : null;
-    incidents.push({ id:"INC-"+key.toUpperCase().replace(/[^A-Z0-9]+/g,"-"), key, zoneId, zone, domain, ...info, signals:sigsAll, title:incidentTitle(domain, zone.name), mergedFromZone });
+    incidents.push({ id:"INC-"+key.toUpperCase().replace(/[^A-Z0-9]+/g,"-"), key, zoneId, zone, domain, ...info, signals:sigsAll, title:incidentTitle(domain, zone.name) });
+  }
+  for (const rule of PATTERN_RULES){
+    if (vt < rule.at) continue;
+    const a = incidents.find(i=>i.key===rule.a), b = incidents.find(i=>i.key===rule.b);
+    if (a && b){ a.pattern = b.zone.name; b.pattern = a.zone.name; }
   }
   return incidents.sort((a,b)=> (STATE_ORDER[a.state]-STATE_ORDER[b.state]) || (SEV_ORDER[a.sev]-SEV_ORDER[b.sev]) || (b.support-a.support));
 }
@@ -422,7 +470,7 @@ document.getElementById("domainList").innerHTML = Object.values(DOMAIN_META).map
   <div class="domain-row"><span class="sw" style="background:${d.hex}"></span>${d.label}</div>
 `).join("");
 
-let activeFloor = null; // null = all floors
+let activeFloor = null;
 const chipsEl = document.getElementById("floorToggle");
 function renderChips(){
   const items = [{ label:"Összes szint", floor:null }].concat(
@@ -454,30 +502,17 @@ const map = new mapboxgl.Map({
   attributionControl: false,
 });
 map.addControl(new mapboxgl.AttributionControl({ compact:true }));
+window.addEventListener("resize", () => map.resize());
 
 let overlay;
 map.on("load", () => {
-  // Light classic style — hide label clutter, everything else is
-  // light-v11's own real, already-light default palette (kept, rather
-  // than overridden, to match the "white concept" ask directly).
   const HIDE = ["poi-label","airport-label","settlement-subdivision-label",
     "settlement-minor-label","settlement-major-label","state-label",
     "country-label","continent-label","natural-point-label",
     "natural-line-label","water-point-label","water-line-label",
     "waterway-label","road-label-simple"];
   for (const id of HIDE) if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", "none");
-  // Flat, hidden "building" fill layer only — no 3D extrusion for
-  // surrounding buildings. Arena Mall itself is present in Mapbox's own
-  // composite building source with real height data, so a generic
-  // city-building extrusion layer would draw an opaque block directly over
-  // our own venue footprint, occluding the deck.gl floor plates underneath
-  // (confirmed: an earlier version of this file did exactly that).
 
-  // Real GL lighting instead of flat fills — a warm key light + cool fill
-  // light + soft ambient, combined with `material` on the floor plates
-  // below, gives each slab an actual glossy top-face highlight and shaded
-  // side walls (real Phong shading, not a solid color swatch) — the
-  // "rainbow cake" look: vivid, opaque, and lit like a physical object.
   const lightingEffect = new deck.LightingEffect({
     ambient: new deck.AmbientLight({ color: [255,255,255], intensity: 1.3 }),
     key: new deck.PointLight({ color: [255,250,240], intensity: 0.35, position: [19.088, 47.5005, 400] }),
@@ -485,13 +520,6 @@ map.on("load", () => {
   });
 
   overlay = new deck.MapboxOverlay({
-    // Non-interleaved: nothing on the Mapbox side is 3D any more (the
-    // city-buildings extrusion was removed earlier this session for
-    // occluding the floor plates, and no terrain is set), so there is
-    // nothing left to depth-composite against. interleaved:true forces a
-    // per-frame Mapbox depth-buffer readback to support that compositing —
-    // real GPU cost for zero visual benefit here, and the likely main
-    // contributor to the stutter/flicker under sustained animation.
     interleaved: false,
     effects: [lightingEffect],
     layers: buildLayers(),
@@ -508,37 +536,12 @@ map.on("load", () => {
   });
   map.addControl(overlay);
 
-  // Zone name labels as plain manually-positioned divs, not
-  // mapboxgl.Marker and not a deck.gl TextLayer.
-  //
-  // deck.gl's TextLayer (WebGL glyph atlas) rendered nothing at all under
-  // any configuration tried (background, pixelOffset, characterSet,
-  // fontFamily, depthTest), confirmed via an isolated single-label test
-  // page — that's why this uses plain DOM instead.
-  //
-  // mapboxgl.Marker was the first DOM attempt and looked right by every
-  // check (in the DOM, getBoundingClientRect returned real numbers,
-  // getComputedStyle said opacity:1, visibility:visible, on top of the
-  // stack) yet painted nothing — a pixel-level screenshot crop confirmed
-  // it. The actual cause, found by reading the element's live inline
-  // style: Mapbox GL JS v3 markers run their own per-frame occlusion
-  // opacity in a pitched 3D scene, and it was fighting this file's own
-  // opacity control — the two together landed on values that read as
-  // "basically visible" in the DOM but composited as essentially
-  // transparent. Bypassing mapboxgl.Marker entirely removes that fight:
-  // these are now plain divs in a fixed overlay, repositioned by hand
-  // from map.project() on every render, with opacity fully owned by this
-  // file and nothing else touching it.
+  // Plain manually-positioned divs, not mapboxgl.Marker: Mapbox GL JS v3
+  // runs its own per-frame occlusion opacity on markers in a pitched 3D
+  // scene, which fights any opacity this file sets. z-index:5 is
+  // load-bearing — the deck.gl canvas lives inside Mapbox's own
+  // `.mapboxgl-ctrl-top-left`, which ships with z-index:2.
   const labelLayer = document.createElement("div");
-  // z-index:5 is load-bearing, not decoration: the deck.gl overlay canvas
-  // lives inside Mapbox's own `.mapboxgl-ctrl-top-left` control container,
-  // which Mapbox's stock CSS gives z-index:2. Without an explicit z-index
-  // here, this layer sits at the stacking-context equivalent of 0 and
-  // loses to that 2 regardless of DOM order — confirmed as the actual
-  // cause of the labels being invisible: they weren't hidden by opacity
-  // or a CSS mistake, they were being fully painted over by deck.gl's own
-  // opaque content everywhere it drew anything, and only showed (faintly)
-  // over the plain basemap where deck.gl painted nothing.
   labelLayer.style.cssText = "position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:5;";
   document.getElementById("map").appendChild(labelLayer);
   for (const z of ZONES) {
@@ -574,29 +577,18 @@ function buildLayers(){
   const floors = [0,1,2];
   const floorData = floors.map(fl => ({
     floor: fl,
-    polygon: SITE_BOUNDARY.map(([lng,lat]) => [lng, lat, fl*FLOOR_H]),
+    polygon: SITE_BOUNDARY.map(([lng,lat]) => [lng, lat, fl*FLOOR_H_M]),
   }));
 
   const boundaryPath = [SITE_BOUNDARY.map(([lng,lat]) => [lng,lat,0])];
 
-  // Every floor slab spans the full real building footprint (only OSM's
-  // single ground-level outline exists, not distinct per-floor
-  // footprints), so any marker sitting at its own floor's height is
-  // geometrically buried under every slab stacked above it when viewed
-  // from outside/above. Fix: float every marker above the tallest floor
-  // and drop a thin vertical stem down to its real floor slab, like a pin
-  // flag — the marker stays visible, the stem shows its real floor.
-  const READABLE_Z = 3*FLOOR_H + 3;
+  const READABLE_Z = 3*FLOOR_H_M + 3;
   const zoneBase = ZONES.map(z => ({
     ...z,
     pos: [z.lng, z.lat, READABLE_Z],
-    stem: [[z.lng, z.lat, z.floor*FLOOR_H + FLOOR_T], [z.lng, z.lat, READABLE_Z]],
+    stem: [[z.lng, z.lat, z.floor*FLOOR_H_M + FLOOR_T_M], [z.lng, z.lat, READABLE_Z]],
   }));
 
-  // Incident markers: one per currently-live zone::domain incident, offset
-  // slightly per zone when more than one incident shares a zone (real
-  // data: central-atrium carries both a water and a later waste story) so
-  // they never fully overlap.
   const byZone = {};
   for (const inc of INCIDENTS_NOW) (byZone[inc.zoneId] ||= []).push(inc);
   const incidentData = [];
@@ -609,7 +601,7 @@ function buildLayers(){
 
   const facilityData = FACILITIES.map(f => ({
     ...f,
-    pos: [f.lng, f.lat, f.floor*FLOOR_H + FLOOR_T + 0.6],
+    pos: [f.lng, f.lat, f.floor*FLOOR_H_M + FLOOR_T_M + 0.6],
   }));
 
   const dim = fl => activeFloor === null || activeFloor === fl;
@@ -623,28 +615,13 @@ function buildLayers(){
       wireframe: true,
       material: { ambient:0.55, diffuse:0.55, shininess:24, specularColor:[255,255,255] },
       getPolygon: d => d.polygon,
-      getElevation: FLOOR_T,
-      // Near-opaque, muted, architectural — a material each slab is made
-      // of, not a tinted pane of glass. Real Phong shading from the
-      // lighting effect above gives each one genuine highlight/shadow
-      // depth, so color can stay restrained instead of doing all the work.
+      getElevation: FLOOR_T_M,
       getFillColor: d => [...FLOOR_COLOR[d.floor], dim(d.floor) ? 248 : 28],
       getLineColor: [255,255,255, 235],
       lineWidthMinPixels: 1,
       updateTriggers: { getFillColor: activeFloor },
       transitions: { getFillColor: 200 },
     }),
-    // Two-layer glow behind every incident dot — a wide, very soft outer
-    // falloff plus a tighter, brighter inner ring — approximating a real
-    // radial gradient, which ScatterplotLayer can't do in one instance on
-    // its own. Both scale with the real independent-report count (support:
-    // this IS the cluster-density signal). Static, not animated: an
-    // earlier version drove this off a continuous 70ms timer that rebuilt
-    // every layer on the page forever — that was the actual cause of the
-    // reported flicker, not this layer's visual design. Live "open"
-    // incidents get noticeably more presence here; everything else stays
-    // quiet, per real cluster-marker practice (the base map recedes, the
-    // thing that needs attention doesn't).
     new deck.ScatterplotLayer({
       id: "cluster-aura-outer",
       data: incidentData,
@@ -665,10 +642,6 @@ function buildLayers(){
       stroked: false,
       updateTriggers: { getFillColor: activeFloor },
     }),
-    // Neutral graphite, not blue: the old boundary color was the same
-    // iOS-blue as floor 0, so the site outline and the ground floor read
-    // as "the same color" for no real reason. A structural edge doesn't
-    // need to compete for a spot in the meaningful palette.
     new deck.PathLayer({
       id: "boundary-glow",
       data: boundaryPath,
@@ -724,11 +697,6 @@ function buildLayers(){
       data: incidentData,
       pickable: true,
       getPosition: d => d.pos,
-      // Live "open" incidents read as urgent through static size + a ring
-      // in the one reserved urgent-red, not continuous animation — see
-      // the aura layer's comment above for why an animated pulse was
-      // dropped. Every other state keeps a plain white ring: red is spent
-      // on exactly one meaning here, never used decoratively elsewhere.
       getRadius: d => (d.zoneId===FLAGSHIP_ZONE ? 6.5 : 5) + (d.state==="open" ? 1.5 : 0),
       radiusMinPixels: d => (d.zoneId===FLAGSHIP_ZONE ? 9 : 7) + (d.state==="open" ? 2 : 0),
       getFillColor: d => [...hex2rgb(DOMAIN_META[d.domain].hex), dim(d.zone.floor) ? 255 : 45],
@@ -742,6 +710,7 @@ function buildLayers(){
     }),
   ];
 }
+const FLOOR_H_M = 4.6, FLOOR_T_M = 2.2;
 
 function updateLayers(){
   if (overlay) overlay.setProps({ layers: buildLayers() });
@@ -749,46 +718,63 @@ function updateLayers(){
 }
 
 /* ---------------- Replay engine ---------------- */
-let virtualTime = T_MAX;
+let virtualTime = T_MIN;
 let INCIDENTS_NOW = [];
 let playing = false;
 let lastFrameMs = 0;
-const REPLAY_DURATION_MS = 26000; // real seconds to play the full 95-minute window
+const REPLAY_DURATION_MS = 26000;
 
-// No standing render loop: layers rebuild only on a real state change
-// (scrub, play frame, floor toggle) — see setVirtualTime/renderChips below.
-// An earlier version rebuilt every layer on a 70ms timer forever, even at
-// rest, to drive a breathing glow — that constant full-scene rebuild was
-// the actual cause of the reported flicker/stutter across the whole page,
-// not any single layer.
+function recomputeIncidents(){ INCIDENTS_NOW = buildIncidentsAtTime(virtualTime); }
 
-function recomputeIncidents(){
-  INCIDENTS_NOW = buildIncidentsAtTime(virtualTime);
-}
+function langCount(inc){ return new Set(inc.signals.map(s=>s.lang)).size; }
 
 function renderIncidentCard(){
   const body = document.getElementById("incBody");
-  // Prefer the flagship zone's real water/restroom story specifically —
-  // it's the one used verbatim in this account's outreach emails and
-  // pilot brief — over whichever incident at that zone happens to sort
-  // first (a "watch"-state incident elsewhere can legitimately outrank a
-  // "verified" one in the live sort, since resolved stories sink down).
-  const top = INCIDENTS_NOW.find(i=>i.zoneId===FLAGSHIP_ZONE && i.domain==="water")
+  const top = INCIDENTS_NOW.find(i=>i.zoneId===FLAGSHIP_ZONE && i.domain==="restroom")
     || INCIDENTS_NOW.find(i=>i.zoneId===FLAGSHIP_ZONE)
     || INCIDENTS_NOW[0];
   if (!top){
-    body.innerHTML = `<p class="inc-empty">Nincs aktív jelzés ezen az időponton.</p>`;
+    body.innerHTML = `<p class="inc-empty">Nincs aktív jelzés ezen az időponton. Indítsd el a replayt.</p>`;
     return;
   }
-  const shown = top.signals.filter(s=>!s.duplicate);
-  const log = shown.map(s => `<li><b>${fmtClock(s.t)}</b> "${s.text}"${s.resolution ? ' <b>— megoldva</b>' : ''}</li>`).join("");
-  const mergedNote = top.mergedFromZone ? `<li>független jelzés innen: ${top.mergedFromZone} — összevonva</li>` : "";
   const others = INCIDENTS_NOW.length - 1;
+  const duration = Math.round(top.lastSignal - top.firstSignal);
+  const owner = OWNER_BY_DOMAIN[top.domain] || "Üzemeltetés";
+  const action = ACTION_BY_STATE[top.state];
+
+  const timeline = [
+    `<li><b>${fmtClock(top.firstSignal)}</b>Első jelzés</li>`,
+    top.clusterAt!=null ? `<li><b>${fmtClock(top.clusterAt)}</b>Klaszter felismerve</li>` : "",
+    top.resolvedAt!=null ? `<li><b>${fmtClock(top.resolvedAt)}</b>Visszaigazolva</li>` : "",
+    top.verifiedAt!=null ? `<li><b>${fmtClock(top.verifiedAt)}</b>Megoldva</li>` : "",
+  ].join("");
+
+  const patternFlag = top.pattern ? `
+    <div class="pattern-flag">⚠ Lehetséges rendszerszintű ellátási probléma — azonos tünettípus itt is: <b>${top.pattern}</b>. Emberi ellenőrzés javasolt.</div>
+  ` : "";
+
   body.innerHTML = `
     <span class="inc-badge ${top.state}">${STATE_LABEL[top.state]}</span>
     <p class="inc-title">${top.title}</p>
-    <p class="inc-meta">${top.id} · ${FLOOR_LABEL[top.zone.floor]} · első jelzés ${fmtClock(top.firstSignal)}</p>
-    <ul class="inc-log">${log}${mergedNote}</ul>
+    <p class="inc-meta">${FLOOR_LABEL[top.zone.floor]} · ${top.support} független jelzés · ${langCount(top)} nyelv · ${duration} perc</p>
+
+    <div class="inc-sub">Miért kapcsoltuk össze?</div>
+    <ul class="why-list">
+      <li>azonos zóna</li>
+      <li>egymással összefüggő tünetek</li>
+      <li>növekvő jelentéssűrűség</li>
+      <li>${top.support} független bejelentés</li>
+    </ul>
+
+    <div class="inc-sub">Javaslat</div>
+    <div class="kv-row"><span class="k">Javasolt felelős</span><span class="v">${owner}</span></div>
+    <div class="kv-row"><span class="k">Javasolt művelet</span><span class="v">${action}</span></div>
+
+    <div class="inc-sub">Idővonal</div>
+    <ul class="timeline">${timeline}</ul>
+
+    ${patternFlag}
+    <p class="measure-note">Pilotban mérendő: a PRE//OOPS klaszter és a jelenlegi operációs felismerés közötti idő.</p>
     ${others > 0 ? `<p class="inc-other">+ ${others} további aktív incidens más zónában</p>` : ""}
   `;
 }
@@ -797,7 +783,6 @@ const trackEl = document.getElementById("track");
 const trackFillEl = document.getElementById("trackFill");
 const trackThumbEl = document.getElementById("trackThumb");
 const clockNowEl = document.getElementById("clockNow");
-const livePillEl = document.getElementById("livePill");
 const playBtn = document.getElementById("playBtn");
 
 function updateReplayUI(){
@@ -805,9 +790,6 @@ function updateReplayUI(){
   trackFillEl.style.width = (frac*100).toFixed(2)+"%";
   trackThumbEl.style.left = (frac*100).toFixed(2)+"%";
   clockNowEl.textContent = fmtClock(virtualTime);
-  const isLive = virtualTime >= T_MAX - 0.5;
-  livePillEl.classList.toggle("replaying", !isLive);
-  livePillEl.innerHTML = isLive ? `<span class="dot"></span>ÉLŐ` : `<span class="dot"></span>VISSZAJÁTSZÁS`;
 }
 
 function setVirtualTime(vt){
@@ -824,7 +806,7 @@ function scrubFromClientX(clientX){
   setVirtualTime(T_MIN + frac*(T_MAX-T_MIN));
 }
 trackEl.addEventListener("pointerdown", (e) => {
-  playing = false; playBtn.textContent = "▶";
+  playing = false; playBtn.textContent = "▶ Replay indítása";
   scrubFromClientX(e.clientX);
   const onMove = ev => scrubFromClientX(ev.clientX);
   const onUp = () => { document.removeEventListener("pointermove", onMove); document.removeEventListener("pointerup", onUp); };
@@ -839,7 +821,7 @@ function playFrame(nowMs){
   const next = virtualTime + (dt / REPLAY_DURATION_MS) * (T_MAX - T_MIN);
   if (next >= T_MAX){
     setVirtualTime(T_MAX);
-    playing = false; playBtn.textContent = "▶"; lastFrameMs = 0;
+    playing = false; playBtn.textContent = "↺ Újrajátszás"; lastFrameMs = 0;
     return;
   }
   setVirtualTime(next);
@@ -847,7 +829,7 @@ function playFrame(nowMs){
 }
 playBtn.onclick = () => {
   playing = !playing;
-  playBtn.textContent = playing ? "❚❚" : "▶";
+  playBtn.textContent = playing ? "❚❚ Szünet" : "▶ Replay indítása";
   if (playing){
     if (virtualTime >= T_MAX - 0.01) virtualTime = T_MIN;
     lastFrameMs = 0;
@@ -857,14 +839,6 @@ playBtn.onclick = () => {
 
 function initReplay(){
   recomputeIncidents();
-  // The deck.gl overlay was first built (in map.on("load") above) before
-  // INCIDENTS_NOW had ever been computed, so its incident-markers/
-  // cluster-aura layers started out permanently empty — invisible until
-  // the user scrubbed, played, or toggled a floor, since those were the
-  // only things that called updateLayers(). A fresh, untouched page load
-  // showed no incidents or glow at all. This is likely what actually
-  // looked "broken" — every verification screenshot up to this point had
-  // already scrubbed or pressed play first, which masked it.
   updateLayers();
   renderIncidentCard();
   updateReplayUI();
